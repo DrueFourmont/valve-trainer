@@ -8,6 +8,12 @@ import type { Effects } from '../scene/effects'
  * Rule from CLAUDE.md: never move the camera the student did not cause. Both
  * of these are student initiated, there is no smooth locomotion anywhere, and
  * the teleport is masked by a short fade so the world never slides past.
+ *
+ * One deliberate exception: arriving from a teleport also turns the student to
+ * face the work area. It is still their own teleport that caused it, and the
+ * turn happens while the screen is fully black, so there is no moving image to
+ * conflict with the inner ear. Without it a student who arcs over the skid
+ * lands looking at empty floor with the equipment behind them.
  */
 
 const TELEPORT_SPEED = 6
@@ -129,6 +135,8 @@ export function setupLocomotion(opts: {
   const landing = new THREE.Vector3()
   const headBefore = new THREE.Vector3()
   const headAfter = new THREE.Vector3()
+  const facing = new THREE.Vector3()
+  const toCentre = new THREE.Vector3()
 
   let aiming = false
   let turnArmed = true
@@ -232,6 +240,8 @@ export function setupLocomotion(opts: {
           camera.getWorldPosition(headBefore)
           rig.position.x += destination.x - headBefore.x
           rig.position.z += destination.z - headBefore.z
+          faceWorkArea(destination)
+          onEvent?.(`arrived facing work area, yaw ${degrees()}`)
         }
 
         fadeMaterial.opacity = 1 - (t - crossover) / (1 - crossover)
@@ -242,6 +252,22 @@ export function setupLocomotion(opts: {
         moving = false
       },
     )
+  }
+
+  /** Turn on the spot so the equipment is in front of you when the fade lifts. */
+  function faceWorkArea(from: THREE.Vector3): void {
+    toCentre.set(workAreaCenter.x - from.x, 0, workAreaCenter.z - from.z)
+    if (toCentre.lengthSq() < 1e-6) return
+
+    camera.getWorldDirection(facing)
+    facing.y = 0
+    if (facing.lengthSq() < 1e-6) return
+
+    const current = Math.atan2(facing.x, facing.z)
+    const desired = Math.atan2(toCentre.x, toCentre.z)
+    // Wrap into -PI..PI so it always takes the short way round.
+    const delta = Math.atan2(Math.sin(desired - current), Math.cos(desired - current))
+    snapTurn(delta)
   }
 
   function snapTurn(delta: number): void {
