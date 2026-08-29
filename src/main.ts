@@ -92,6 +92,25 @@ async function boot(): Promise<void> {
   }
   const itemsByName = new Map(items.map((item) => [item.name, item]))
 
+  // Handles turn about their own local Y, so the model has to put local Y along
+  // the stem. That is easy to get wrong in an export and invisible until a
+  // wheel tumbles instead of spinning, so report the real axis rather than
+  // letting it be discovered by eye.
+  if (loaded.source === 'model') {
+    const spin = new THREE.Vector3()
+    const orientation = new THREE.Quaternion()
+    for (const name of ROTATING_TARGETS) {
+      const item = itemsByName.get(name)
+      if (!item) continue
+      item.object.getWorldQuaternion(orientation)
+      spin.set(0, 1, 0).applyQuaternion(orientation).normalize()
+      const vertical = Math.abs(spin.y) > 0.98 ? 'vertical' : 'NOT vertical'
+      debugLog(
+        `${name} spin axis ${spin.x.toFixed(2)}, ${spin.y.toFixed(2)}, ${spin.z.toFixed(2)} (${vertical})`,
+      )
+    }
+  }
+
   const effects = new Effects()
   const steam = new Steam()
   scene.add(steam.points)
