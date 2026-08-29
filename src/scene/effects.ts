@@ -21,6 +21,21 @@ export class Effects {
     this.tweens = this.tweens.filter((tween) => tween(deltaSeconds))
   }
 
+  /** Generic timed tween. Used by the teleport fade. */
+  tween(durationMs: number, onProgress: (t: number) => void, onDone?: () => void): void {
+    let elapsed = 0
+    this.tweens.push((dt) => {
+      elapsed += dt * 1000
+      const t = Math.min(1, elapsed / durationMs)
+      onProgress(t)
+      if (t >= 1) {
+        onDone?.()
+        return false
+      }
+      return true
+    })
+  }
+
   /** Turn a handle about its own Y axis, which is where the model puts it. */
   rotate(object: THREE.Object3D, deltaRadians: number, durationMs: number): void {
     const start = object.rotation.y

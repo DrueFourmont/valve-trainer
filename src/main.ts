@@ -5,13 +5,17 @@ import './style.css'
 import { playBuzzer, playClick, playSuccess } from './audio/sfx'
 import { Hover, collectInteractables } from './input/interactables'
 import { setupPointerInput } from './input/pointer'
+import { setupLocomotion } from './input/locomotion'
 import { setupXrInput } from './input/xr'
 import { ALLOWED_TARGETS, ProcedureMachine, type Procedure, parseProcedure } from './procedure/machine'
 import { scoreAttempt } from './procedure/score'
 import { Effects, Steam } from './scene/effects'
+import { createWristHud, type WristHud } from './scene/hud-wrist'
 import { createSkid } from './scene/skid'
 import { createWorldPanel } from './scene/world-panel'
 import { debugLog } from './ui/debug-overlay'
+import { createHud2d } from './ui/hud-2d'
+import type { StepView } from './ui/hud'
 import { showScorePanel } from './ui/score-panel'
 import { showToast } from './ui/toast'
 import { reportXrSupport } from './ui/xr-support'
@@ -85,10 +89,27 @@ ventNode?.getWorldPosition(steamOrigin)
 const hover = new Hover()
 let machine: ProcedureMachine | null = null
 
-function announceStep(): void {
-  if (!machine) return
+const hud2d = createHud2d()
+let wristHud: WristHud | null = null
+
+/** Null once the procedure is finished, which hides both HUDs. */
+function currentView(): StepView | null {
+  if (!machine || machine.isComplete) return null
   const step = machine.currentStep
-  if (step) debugLog(`step ${machine.stepNumber} of ${machine.totalSteps}: ${step.label}`)
+  if (!step) return null
+  return {
+    number: machine.stepNumber,
+    total: machine.totalSteps,
+    label: step.label,
+    hint: step.hint,
+  }
+}
+
+function refreshHud(): void {
+  const view = currentView()
+  hud2d.update(view)
+  wristHud?.update(view)
+  if (view) debugLog(`step ${view.number} of ${view.total}: ${view.label}`)
 }
 
 function showCompletion(finished: ProcedureMachine): void {
@@ -143,9 +164,9 @@ function interact(name: string): void {
   if (result === 'complete') {
     hover.clear()
     showCompletion(machine)
-  } else {
-    announceStep()
   }
+
+  refreshHud()
 }
 
 const controls = new OrbitControls(camera, renderer.domElement)
@@ -170,6 +191,7 @@ setupPointerInput({
 })
 
 let xrInput: ReturnType<typeof setupXrInput> | null = null
+let locomotion: ReturnType<typeof setupLocomotion> | null = null
 
 if (mode === 'vr') {
   renderer.xr.enabled = true
@@ -177,7 +199,16 @@ if (mode === 'vr') {
   document.body.appendChild(VRButton.createButton(renderer))
   void reportXrSupport()
 
-  xrInput = setupXrInput({ renderer, rig, hover, items, onInteract: interact })
+  wristHud = createWristHud()
+  xrInput = setupXrInput({
+    renderer,
+    rig,
+    hover,
+    items,
+    onInteract: interact,
+    wristMount: wristHud.mesh,
+  })
+  locomotion = setupLocomotion({ renderer, scene, rig, camera, effects })
 
   // Three writes the live headset pose straight into camera.position and
   // camera.quaternion on every frame of a session (setProjectionFromUnion in
@@ -223,6 +254,7 @@ renderer.setAnimationLoop(() => {
   const delta = clock.getDelta()
 
   if (renderer.xr.isPresenting) {
+    locomotion?.update()
     if (machine?.isComplete) hover.clear()
     else xrInput?.update()
   } else {
@@ -244,7 +276,7 @@ loadProcedure()
   .then((procedure) => {
     machine = new ProcedureMachine(procedure)
     machine.start()
-    announceStep()
+    refreshHud()
   })
   .catch((error: unknown) => {
     showToast(`Could not load the procedure: ${String(error)}`, 'error', 0)

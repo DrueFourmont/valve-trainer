@@ -33,8 +33,10 @@ export function setupXrInput(opts: {
   hover: Hover
   items: readonly Interactable[]
   onInteract: (name: string) => void
+  /** Parented to whichever grip reports itself as the left hand. */
+  wristMount?: THREE.Object3D
 }): { update: () => void } {
-  const { renderer, rig, hover, items, onInteract } = opts
+  const { renderer, rig, hover, items, onInteract, wristMount } = opts
 
   const raycaster = new THREE.Raycaster()
   const rotation = new THREE.Matrix4()
@@ -54,6 +56,11 @@ export function setupXrInput(opts: {
 
     controller.addEventListener('selectstart', () => {
       if (hand.hit) onInteract(hand.hit.name)
+    })
+
+    controller.addEventListener('connected', (event) => {
+      const handedness = (event as unknown as { data?: { handedness?: string } }).data?.handedness
+      if (handedness === 'left' && wristMount) grip.add(wristMount)
     })
 
     return hand

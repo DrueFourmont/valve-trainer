@@ -125,3 +125,65 @@ canvas {
   font-size: 16px;
   cursor: pointer;
 }
+
+.hud-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px calc(14px + env(safe-area-inset-bottom, 0px));
+  padding-left: calc(18px + env(safe-area-inset-left, 0px));
+  padding-right: calc(18px + env(safe-area-inset-right, 0px));
+  border-top: 1px solid #232c35;
+  background: rgb(14 18 22 / 92%);
+  /* Let drags pass through to the canvas so the bottom strip still orbits. */
+  pointer-events: none;
+}
+
+.hud-tracker {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 62px;
+  min-height: 48px;
+  padding: 0 12px;
+  border-radius: 9px;
+  background: #1e2731;
+  color: #9ad2ff;
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-text {
+  min-width: 0;
+}
+
+.hud-label {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #e6edf3;
+}
+
+.hud-hint {
+  margin-top: 3px;
+  font-size: 14px;
+  line-height: 1.35;
+  color: #9fb6cc;
+}
+
+@media (max-width: 480px) {
+  .hud-label {
+    font-size: 17px;
+  }
+
+  .hud-hint {
+    font-size: 13px;
+  }
+}
