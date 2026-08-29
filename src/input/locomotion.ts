@@ -127,6 +127,18 @@ export function setupLocomotion(opts: {
   let moving = false
   let target: THREE.Vector3 | null = null
 
+  // Whatever state a session ended in, the next one starts clear.
+  for (const event of ['sessionstart', 'sessionend'] as const) {
+    renderer.xr.addEventListener(event, () => {
+      fadeMaterial.opacity = 0
+      fade.visible = false
+      moving = false
+      aiming = false
+      turnArmed = true
+      hideAim()
+    })
+  }
+
   /**
    * Walks a projectile until it reaches the floor. Returns the number of arc
    * points drawn, and sets landing when it found one within range.
@@ -176,32 +188,43 @@ export function setupLocomotion(opts: {
     target = null
   }
 
+  /**
+   * One tween, not two chained ones. The move happens at the crossover point
+   * while the screen is fully black. Chaining a fade in off the fade out's
+   * completion is how this got stuck on black once already, and a single
+   * timeline cannot half finish.
+   */
   function teleport(destination: THREE.Vector3): void {
     if (moving) return
     moving = true
     fade.visible = true
 
+    const total = FADE_OUT_MS + FADE_IN_MS
+    const crossover = FADE_OUT_MS / total
+    let moved = false
+
     effects.tween(
-      FADE_OUT_MS,
+      total,
       (t) => {
-        fadeMaterial.opacity = t
+        if (t < crossover) {
+          fadeMaterial.opacity = t / crossover
+          return
+        }
+
+        if (!moved) {
+          moved = true
+          // Move the rig so the head lands on the target, not the rig origin.
+          camera.getWorldPosition(headBefore)
+          rig.position.x += destination.x - headBefore.x
+          rig.position.z += destination.z - headBefore.z
+        }
+
+        fadeMaterial.opacity = 1 - (t - crossover) / (1 - crossover)
       },
       () => {
-        // Move the rig so the head lands on the target, not the rig origin.
-        camera.getWorldPosition(headBefore)
-        rig.position.x += destination.x - headBefore.x
-        rig.position.z += destination.z - headBefore.z
-
-        effects.tween(
-          FADE_IN_MS,
-          (t) => {
-            fadeMaterial.opacity = 1 - t
-          },
-          () => {
-            fade.visible = false
-            moving = false
-          },
-        )
+        fadeMaterial.opacity = 0
+        fade.visible = false
+        moving = false
       },
     )
   }

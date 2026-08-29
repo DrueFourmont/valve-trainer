@@ -278,6 +278,9 @@ async function loadProcedure(): Promise<Procedure> {
   return parseProcedure(await response.json())
 }
 
+// Shows immediately, in either mode, so a stale page is obvious at a glance.
+debugStatus(`mode ${mode} | build ${__BUILD_ID__}`)
+
 loadProcedure()
   .then((procedure) => {
     machine = new ProcedureMachine(procedure)
