@@ -35,6 +35,9 @@ const PULSE_MS = 500
 const STEAM_MS = 1000
 const TAG_DROP_M = 0.06
 
+/** Longest frame step any animation will see, about 10 fps. */
+const MAX_FRAME_DELTA = 0.1
+
 async function loadProcedure(): Promise<Procedure> {
   const response = await fetch('procedures/valve-isolation.json')
   if (!response.ok) throw new Error(`HTTP ${response.status}`)
@@ -299,12 +302,17 @@ async function boot(): Promise<void> {
     renderer.setSize(window.innerWidth, window.innerHeight)
   })
 
-  const clock = new THREE.Clock()
+  // THREE.Clock is deprecated since r183 and warns on construction, which is
+  // console noise in production. Timer replaces it but does not clamp: its
+  // first update reports the whole page lifetime and any stall reports the
+  // whole stall, either of which would jump every running tween to its end.
+  const timer = new THREE.Timer()
   const headPosition = new THREE.Vector3()
   let lastLoopError = ''
 
-  renderer.setAnimationLoop(() => {
-    const delta = clock.getDelta()
+  renderer.setAnimationLoop((timestamp: number) => {
+    timer.update(timestamp)
+    const delta = Math.min(timer.getDelta(), MAX_FRAME_DELTA)
 
     // A throw in here used to take the whole render with it, so the headset
     // went black with no way to see why. Keep drawing and surface the reason.
