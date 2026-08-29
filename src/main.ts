@@ -74,10 +74,13 @@ const effects = new Effects()
 const steam = new Steam()
 scene.add(steam.points)
 
-// House rule: read positions from the model. The vent comes off the pipe run,
-// wherever the model happens to put it.
+// House rule: read positions from the model, never hardcode them. Venting from
+// the bleed valve is where a real drain would let go, and it lines up with the
+// phase 7 consequence for bleeding a line that is still pressurised. Falls back
+// to the pipe run so a GLB missing the bleed node still vents somewhere sane.
 const steamOrigin = new THREE.Vector3(0, 1, 0)
-skid.getObjectByName('pipe_run')?.getWorldPosition(steamOrigin)
+const ventNode = skid.getObjectByName('bleed') ?? skid.getObjectByName('pipe_run')
+ventNode?.getWorldPosition(steamOrigin)
 
 const hover = new Hover()
 let machine: ProcedureMachine | null = null
