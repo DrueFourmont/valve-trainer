@@ -32,6 +32,19 @@ const PANEL_WIDTH_M = 0.17
  */
 const MOUNT_POSITION = new THREE.Vector3(0, 0.05, 0.06)
 
+/**
+ * Aim an object's face at a point.
+ *
+ * Three's lookAt swaps eye and target for anything that is not a camera or a
+ * light, so a mesh's +Z, which is the side a PlaneGeometry shows, ends up
+ * pointing at the target already. Adding a half turn on top of it, which looks
+ * like the obvious correction, points the panel away from the reader instead.
+ * There is a test for this.
+ */
+export function faceTowards(object: THREE.Object3D, target: THREE.Vector3): void {
+  object.lookAt(target)
+}
+
 function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
   const lines: string[] = []
   let line = ''
@@ -114,10 +127,7 @@ export function createWristHud(): WristHud {
 
     faceCamera(headWorldPosition: THREE.Vector3): void {
       if (!mesh.visible) return
-      // lookAt aims -Z at the target, which is right for a camera and backwards
-      // for a plane, whose face is +Z. Hence the half turn.
-      mesh.lookAt(headWorldPosition)
-      mesh.rotateY(Math.PI)
+      faceTowards(mesh, headWorldPosition)
     },
 
     update(view: StepView | null): void {
