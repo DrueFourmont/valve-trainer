@@ -42,6 +42,10 @@ score cards showed.
 Lighthouse on production scores 83 performance, 100 accessibility, 100 best
 practices, 100 SEO.
 
+**Verified by Drue against the deployed site.** A full run in 2D on desktop, on
+iPad over the public URL, and in the Immersive Web Emulator, with the attempt
+reaching the instructor page each time.
+
 **Not verified by anyone.** Behaviour on a real Quest headset.
 
 ## Deploying, and one trap worth knowing
@@ -102,9 +106,15 @@ sensitive, look at the compiled config chunk. `isConfigured` folds to a literal
 
 ## Next three tasks
 
-1. **Record the demo clips** on desktop, tablet, and the Immersive Web Emulator,
-   then fill in the demo video link at the top of the README. The deploy itself
-   is done.
+1. **Record the demo clip and add the link to the README.** The deploy is done
+   and verified on desktop, tablet, and the emulator. Only one clip is planned,
+   2D on a laptop.
+
+   Worth reconsidering later: a second clip taken in the Immersive Web Emulator
+   is the one that actually shows the VR work, controller rays, teleport, snap
+   turn, the wrist panel, and the world space score card. For a VR training
+   audience the 2D clip undersells the project. It is a screen recording of a
+   browser window, so it costs about the same to make.
 
 2. **Try it on a real Quest.** The live link works in the Quest browser with no
    further work. Expect to adjust teleport distance and the wrist panel angle.
