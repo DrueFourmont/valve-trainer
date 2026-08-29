@@ -261,7 +261,9 @@ export function setupLocomotion(opts: {
         if (source.handedness === 'left') aimAxis = -y
         if (source.handedness === 'right') turnAxis = x
 
-        const axes = Array.from(pad.axes, (value) => value.toFixed(2)).join(',')
+        const axes = Array.from(pad.axes ?? [], (value) =>
+          typeof value === 'number' ? value.toFixed(2) : String(value),
+        ).join(',')
         seen.push(`${source.handedness}[${axes}]`)
       }
 

@@ -256,19 +256,33 @@ window.addEventListener('resize', () => {
 
 const clock = new THREE.Clock()
 
+let lastLoopError = ''
+
 renderer.setAnimationLoop(() => {
   const delta = clock.getDelta()
 
-  if (renderer.xr.isPresenting) {
-    locomotion?.update()
-    if (machine?.isComplete) hover.clear()
-    else xrInput?.update()
-  } else {
-    controls.update()
+  // A throw in here used to take the whole render with it, so the headset went
+  // black with no way to see why. Keep drawing and surface the reason instead.
+  try {
+    if (renderer.xr.isPresenting) {
+      locomotion?.update()
+      if (machine?.isComplete) hover.clear()
+      else xrInput?.update()
+    } else {
+      controls.update()
+    }
+
+    effects.update(delta)
+    steam.update(delta)
+  } catch (error: unknown) {
+    const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error)
+    if (message !== lastLoopError) {
+      lastLoopError = message
+      debugLog(`loop error: ${message}`)
+      showToast(`Frame error: ${message}`, 'error', 0)
+    }
   }
 
-  effects.update(delta)
-  steam.update(delta)
   renderer.render(scene, camera)
 })
 
