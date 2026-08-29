@@ -1,12 +1,10 @@
 import './instructor.css'
+import { SUPABASE_URL, authHeaders, isConfigured } from './api/config'
 
 /**
  * Instructor view. Plain DOM against the REST endpoint, no framework and no
  * build step beyond Vite's multi page input.
  */
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 interface CompletedStep {
   id: string
@@ -152,7 +150,7 @@ function renderAttempt(attempt: Attempt): HTMLElement {
 }
 
 async function load(): Promise<void> {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  if (!isConfigured) {
     message(
       'No Supabase credentials. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env.local and reload.',
       'error',
@@ -166,7 +164,7 @@ async function load(): Promise<void> {
   try {
     const response = await fetch(
       `${SUPABASE_URL}/rest/v1/attempts?select=*&order=created_at.desc&limit=200`,
-      { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } },
+      { headers: authHeaders() },
     )
     if (!response.ok) {
       throw new Error(`${response.status} ${await response.text().catch(() => '')}`.trim())

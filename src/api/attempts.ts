@@ -1,4 +1,5 @@
 import type { ProcedureState } from '../procedure/machine'
+import { SUPABASE_URL, authHeaders, isConfigured } from './config'
 
 /**
  * Posts a finished attempt to the score edge function.
@@ -9,10 +10,6 @@ import type { ProcedureState } from '../procedure/machine'
  * cannot drift.
  */
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-export const isConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY)
 
 export interface AttemptRecord {
   id: string
@@ -37,11 +34,7 @@ export async function submitAttempt(options: {
 
   const response = await fetch(`${SUPABASE_URL}/functions/v1/score`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      apikey: SUPABASE_ANON_KEY!,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-    },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({
       studentId: studentIdFromUrl(),
       mode: options.mode,
