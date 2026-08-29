@@ -42,8 +42,12 @@ export function setupLocomotion(opts: {
   effects: Effects
   /** Floor level centre of the work area, taken from the model bounds. */
   workAreaCenter: THREE.Vector3
+  /** Temporary, for diagnosing controller input. Removed in phase 6. */
+  onDebug?: (text: string) => void
 }): { update: () => void } {
-  const { renderer, scene, rig, camera, effects, workAreaCenter } = opts
+  const { renderer, scene, rig, camera, effects, workAreaCenter, onDebug } = opts
+
+  let turnCount = 0
 
   // getController returns a cached object per index, so listening here does not
   // interfere with the selection adapter listening to the same objects.
@@ -222,6 +226,7 @@ export function setupLocomotion(opts: {
 
       let aimAxis = 0
       let turnAxis = 0
+      const seen: string[] = []
 
       for (const source of session.inputSources) {
         const pad = source.gamepad
@@ -232,10 +237,21 @@ export function setupLocomotion(opts: {
         const y = pad.axes.length > 3 ? pad.axes[3] : (pad.axes[1] ?? 0)
         if (source.handedness === 'left') aimAxis = -y
         if (source.handedness === 'right') turnAxis = x
+
+        const axes = Array.from(pad.axes, (value) => value.toFixed(2)).join(',')
+        seen.push(`${source.handedness}[${axes}]`)
+      }
+
+      if (onDebug) {
+        const yaw = ((rig.rotation.y * 180) / Math.PI).toFixed(0)
+        onDebug(
+          `${seen.join(' ') || 'no gamepads'}\naim ${aimAxis.toFixed(2)} turn ${turnAxis.toFixed(2)} yaw ${yaw} turns ${turnCount}`,
+        )
       }
 
       if (Math.abs(turnAxis) > TURN_ON && turnArmed) {
         turnArmed = false
+        turnCount += 1
         snapTurn(-Math.sign(turnAxis) * SNAP_ANGLE)
       } else if (Math.abs(turnAxis) < TURN_OFF) {
         turnArmed = true

@@ -62,7 +62,7 @@ canvas {
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   padding: 8px 10px;
   border-radius: 6px;
   border: 1px solid #2f3a45;
@@ -186,4 +186,19 @@ canvas {
   .hud-hint {
     font-size: 13px;
   }
+}
+
+.debug-status {
+  color: #ffd479;
+  white-space: pre;
+}
+
+.debug-status:empty {
+  display: none;
+}
+
+.debug-log {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }

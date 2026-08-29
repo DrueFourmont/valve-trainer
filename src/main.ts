@@ -13,7 +13,7 @@ import { Effects, Steam } from './scene/effects'
 import { createWristHud, type WristHud } from './scene/hud-wrist'
 import { createSkid } from './scene/skid'
 import { createWorldPanel } from './scene/world-panel'
-import { debugLog } from './ui/debug-overlay'
+import { debugLog, debugStatus } from './ui/debug-overlay'
 import { createHud2d } from './ui/hud-2d'
 import type { StepView } from './ui/hud'
 import { showScorePanel } from './ui/score-panel'
@@ -214,7 +214,7 @@ if (mode === 'vr') {
     onInteract: interact,
     wristMount: wristHud.mesh,
   })
-  locomotion = setupLocomotion({ renderer, scene, rig, camera, effects, workAreaCenter })
+  locomotion = setupLocomotion({ renderer, scene, rig, camera, effects, workAreaCenter, onDebug: debugStatus })
 
   // Three writes the live headset pose straight into camera.position and
   // camera.quaternion on every frame of a session (setProjectionFromUnion in
