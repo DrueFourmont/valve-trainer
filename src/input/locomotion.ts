@@ -44,10 +44,16 @@ export function setupLocomotion(opts: {
   workAreaCenter: THREE.Vector3
   /** Temporary, for diagnosing controller input. Removed in phase 6. */
   onDebug?: (text: string) => void
+  /** Temporary. One line per discrete event, so a drag can be read after it. */
+  onEvent?: (text: string) => void
 }): { update: () => void } {
-  const { renderer, scene, rig, camera, effects, workAreaCenter, onDebug } = opts
+  const { renderer, scene, rig, camera, effects, workAreaCenter, onDebug, onEvent } = opts
 
   let turnCount = 0
+  let peakAim = 0
+  let peakTurn = 0
+
+  const degrees = () => ((rig.rotation.y * 180) / Math.PI).toFixed(0)
 
   // getController returns a cached object per index, so listening here does not
   // interfere with the selection adapter listening to the same objects.
@@ -267,10 +273,15 @@ export function setupLocomotion(opts: {
         seen.push(`${source.handedness}[${axes}]`)
       }
 
+      peakAim = Math.max(peakAim, Math.abs(aimAxis))
+      peakTurn = Math.max(peakTurn, Math.abs(turnAxis))
+
       if (onDebug) {
-        const yaw = ((rig.rotation.y * 180) / Math.PI).toFixed(0)
         onDebug(
-          `${seen.join(' ') || 'no gamepads'}\naim ${aimAxis.toFixed(2)} turn ${turnAxis.toFixed(2)} yaw ${yaw} turns ${turnCount}`,
+          `${seen.join(' ') || 'no gamepads'}\n` +
+            `aim ${aimAxis.toFixed(2)} peak ${peakAim.toFixed(2)} | ` +
+            `turn ${turnAxis.toFixed(2)} peak ${peakTurn.toFixed(2)}\n` +
+            `yaw ${degrees()} turns ${turnCount}`,
         )
       }
 
@@ -278,6 +289,7 @@ export function setupLocomotion(opts: {
         turnArmed = false
         turnCount += 1
         snapTurn(-Math.sign(turnAxis) * SNAP_ANGLE)
+        onEvent?.(`snap turn ${turnCount} at axis ${turnAxis.toFixed(2)}, yaw now ${degrees()}`)
       } else if (Math.abs(turnAxis) < TURN_OFF) {
         turnArmed = true
       }
@@ -309,7 +321,14 @@ export function setupLocomotion(opts: {
         aiming = false
         const destination = target
         hideAim()
-        if (destination) teleport(destination)
+        if (destination) {
+          onEvent?.(
+            `teleport to ${destination.x.toFixed(2)}, ${destination.z.toFixed(2)}, yaw ${degrees()}`,
+          )
+          teleport(destination)
+        } else {
+          onEvent?.('release with no valid target, not moving')
+        }
       }
     },
   }

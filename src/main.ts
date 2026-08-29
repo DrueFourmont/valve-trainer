@@ -214,7 +214,7 @@ if (mode === 'vr') {
     onInteract: interact,
     wristMount: wristHud.mesh,
   })
-  locomotion = setupLocomotion({ renderer, scene, rig, camera, effects, workAreaCenter, onDebug: debugStatus })
+  locomotion = setupLocomotion({ renderer, scene, rig, camera, effects, workAreaCenter, onDebug: debugStatus, onEvent: debugLog })
 
   // Three writes the live headset pose straight into camera.position and
   // camera.quaternion on every frame of a session (setProjectionFromUnion in
