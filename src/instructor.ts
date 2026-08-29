@@ -151,8 +151,13 @@ function renderAttempt(attempt: Attempt): HTMLElement {
 
 async function load(): Promise<void> {
   if (!isConfigured) {
+    // Vite bakes VITE_ variables in at build time, so this is always a build
+    // configuration problem, never something a reload will fix.
     message(
-      'No Supabase credentials. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env.local and reload.',
+      'This build has no Supabase credentials, so there are no attempts to show. ' +
+        'VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are read when the site is built: ' +
+        'locally from .env.local, and on Vercel from the project environment variables ' +
+        'followed by a new build.',
       'error',
     )
     return
