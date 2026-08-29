@@ -44,6 +44,37 @@ practices, 100 SEO.
 
 **Not verified by anyone.** Behaviour on a real Quest headset.
 
+## Deploying, and one trap worth knowing
+
+`VITE_` variables are compiled into the bundle at build time, not read at
+runtime. Two consequences:
+
+1. `vercel redeploy` reuses the previous build output, so it will never pick up
+   changed environment variables. Use `vercel --prod`, which rebuilds.
+2. The Vercel CLI intercepts any `VITE_` variable that looks like a credential
+   and asks how to store it. **Its default option silently renames the variable,
+   stripping the `VITE_` prefix and storing it as a Secret**, which hides it from
+   the browser build and is exactly wrong for a client side app. Choose the
+   second option, "Expose to anyone visiting your site". Because it is an
+   interactive prompt, piping or redirecting the value into `vercel env add`
+   makes this worse: stdin hits EOF at the prompt and the CLI takes the
+   renaming default without telling you.
+
+Both variables must end up listed as type `Config`, not `Secret`:
+
+```
+npx vercel env ls
+  VITE_SUPABASE_URL         Config   Production
+  VITE_SUPABASE_ANON_KEY    Config   Production
+```
+
+Exposing the anon key is correct. It is what every Supabase browser client
+ships, and it is protected by row level security rather than by secrecy.
+
+To confirm a deployment actually baked them in, without printing anything
+sensitive, look at the compiled config chunk. `isConfigured` folds to a literal
+`!0` when the values are present and `!1` when they are not.
+
 ## Known gaps
 
 1. **No real headset test.** Comfort details are the risk: teleport distance,
