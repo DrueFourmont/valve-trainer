@@ -19,12 +19,18 @@ const CANVAS_HEIGHT = 360
 const PANEL_WIDTH_M = 0.17
 
 /**
- * Where the panel sits relative to the grip. Grip space points -Z out along
- * the direction the hand is aimed, so +Z is back toward the wrist. The first
- * attempt used -Z and the panel floated out in front of the hand like a sign.
+ * Where the panel sits relative to the grip. Position comes from the grip so it
+ * rides the wrist, but orientation does not: the panel turns to face the head
+ * every frame instead.
+ *
+ * Grip space orientation differs between controller models and I got it wrong
+ * twice guessing, once hanging the panel out in front like a sign and once
+ * pointing it away from the reader. Facing the head is not a workaround for
+ * that, it is the better behaviour anyway, because a rigidly mounted panel
+ * becomes unreadable the moment the student rotates their wrist, which is
+ * constantly.
  */
-const MOUNT_POSITION = new THREE.Vector3(0, 0.02, 0.07)
-const MOUNT_TILT_RAD = -Math.PI / 3
+const MOUNT_POSITION = new THREE.Vector3(0, 0.05, 0.06)
 
 function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
   const lines: string[] = []
@@ -44,6 +50,8 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
 
 export interface WristHud extends Hud {
   readonly mesh: THREE.Mesh
+  /** Call each frame with the head's world position. */
+  faceCamera(headWorldPosition: THREE.Vector3): void
 }
 
 export function createWristHud(): WristHud {
@@ -63,7 +71,6 @@ export function createWristHud(): WristHud {
   )
   mesh.name = 'wrist_hud'
   mesh.position.copy(MOUNT_POSITION)
-  mesh.rotation.x = MOUNT_TILT_RAD
   mesh.visible = false
 
   let lastKey = ''
@@ -104,6 +111,15 @@ export function createWristHud(): WristHud {
 
   return {
     mesh,
+
+    faceCamera(headWorldPosition: THREE.Vector3): void {
+      if (!mesh.visible) return
+      // lookAt aims -Z at the target, which is right for a camera and backwards
+      // for a plane, whose face is +Z. Hence the half turn.
+      mesh.lookAt(headWorldPosition)
+      mesh.rotateY(Math.PI)
+    },
+
     update(view: StepView | null): void {
       if (!view) {
         mesh.visible = false

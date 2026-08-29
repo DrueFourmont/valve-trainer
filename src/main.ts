@@ -256,6 +256,7 @@ window.addEventListener('resize', () => {
 })
 
 const clock = new THREE.Clock()
+const headPosition = new THREE.Vector3()
 
 let lastLoopError = ''
 
@@ -267,6 +268,8 @@ renderer.setAnimationLoop(() => {
   try {
     if (renderer.xr.isPresenting) {
       locomotion?.update()
+      camera.getWorldPosition(headPosition)
+      wristHud?.faceCamera(headPosition)
       if (machine?.isComplete) hover.clear()
       else xrInput?.update()
     } else {
