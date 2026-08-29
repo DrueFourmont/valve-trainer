@@ -1,6 +1,9 @@
 import type { ProcedureState } from '../procedure/machine'
 import { SUPABASE_URL, authHeaders, isConfigured } from './config'
 
+/** Used when no ?student= is supplied. */
+const DEFAULT_STUDENT = 'demo'
+
 /**
  * Posts a finished attempt to the score edge function.
  *
@@ -16,9 +19,14 @@ export interface AttemptRecord {
   score: number
 }
 
+/** Kept separate from location so it can be tested without a browser. */
+export function studentIdFromSearch(search: string): string {
+  const value = new URLSearchParams(search).get('student')?.trim()
+  return value && value !== '' ? value.slice(0, 64) : DEFAULT_STUDENT
+}
+
 export function studentIdFromUrl(): string {
-  const value = new URLSearchParams(location.search).get('student')?.trim()
-  return value && value !== '' ? value.slice(0, 64) : 'demo'
+  return studentIdFromSearch(location.search)
 }
 
 export async function submitAttempt(options: {
