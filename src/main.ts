@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { VRButton } from 'three/addons/webxr/VRButton.js'
 import './style.css'
+import { submitAttempt } from './api/attempts'
 import { playBuzzer, playClick, playSuccess } from './audio/sfx'
 import { Hover, collectInteractables } from './input/interactables'
 import { setupLocomotion } from './input/locomotion'
@@ -171,6 +172,18 @@ async function boot(): Promise<void> {
       durationSeconds,
       errorCount,
     }
+
+    // Posted in the background. The card shows the local score immediately
+    // because both sides run the same scoring file and cannot disagree, so
+    // there is nothing to wait for.
+    submitAttempt({
+      mode,
+      targetSeconds: finished.procedure.targetSeconds,
+      state: finished.snapshot(),
+    }).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error)
+      showToast(`Attempt finished but was not recorded. ${message}`, 'error', 8000)
+    })
 
     // Let the last handle finish turning before the result lands.
     window.setTimeout(() => {

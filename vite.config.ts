@@ -17,6 +17,16 @@ export default defineConfig({
     __BUILD_ID__: JSON.stringify(new Date().toISOString().slice(11, 19)),
   },
   plugins: inVitest ? [] : [mkcert()],
+  build: {
+    rollupOptions: {
+      // Two pages: the trainer and the instructor view. Paths are relative to
+      // the project root.
+      input: {
+        main: 'index.html',
+        instructor: 'instructor.html',
+      },
+    },
+  },
   server: {
     host: true,
     port: 5173,

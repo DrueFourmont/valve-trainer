@@ -1,0 +1,166 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100%;
+  background: #0e1216;
+  color: #e6edf3;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+#instructor {
+  max-width: 940px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+}
+
+.page-head {
+  margin-bottom: 24px;
+}
+
+.page-head h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 650;
+}
+
+.page-sub {
+  margin: 4px 0 0;
+  color: #9fb6cc;
+}
+
+.notice {
+  padding: 20px;
+  border: 1px solid #232c35;
+  border-radius: 10px;
+  background: #131920;
+  color: #9fb6cc;
+}
+
+.notice-error {
+  border-color: #7a3b32;
+  background: #241a19;
+  color: #e0a79f;
+}
+
+.attempt-head,
+.attempt-summary {
+  display: grid;
+  grid-template-columns: 64px 1.4fr 0.7fr 0.7fr 0.9fr 1.2fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.attempt-head {
+  padding: 0 14px 8px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6f8497;
+}
+
+.attempt {
+  border: 1px solid #232c35;
+  border-radius: 10px;
+  background: #131920;
+  margin-bottom: 8px;
+}
+
+.attempt-summary {
+  padding: 12px 14px;
+  min-height: 52px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.attempt-summary::-webkit-details-marker {
+  display: none;
+}
+
+.attempt[open] .attempt-summary {
+  border-bottom: 1px solid #232c35;
+}
+
+.cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell-mode,
+.cell-errors,
+.cell-duration,
+.cell-when {
+  color: #9fb6cc;
+  font-variant-numeric: tabular-nums;
+}
+
+.score {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 46px;
+  padding: 5px 0;
+  border-radius: 7px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.score-good {
+  background: #16341f;
+  color: #74d99a;
+}
+
+.score-fair {
+  background: #3a3218;
+  color: #ddc16a;
+}
+
+.score-poor {
+  background: #3a1e1a;
+  color: #e08b7f;
+}
+
+.timeline {
+  margin: 0;
+  padding: 12px 14px 14px 34px;
+  font-size: 14px;
+  color: #c6d4e1;
+}
+
+.timeline-item {
+  padding: 2px 0;
+}
+
+.timeline-error {
+  color: #e08b7f;
+}
+
+.timeline-empty {
+  list-style: none;
+  margin-left: -20px;
+  color: #6f8497;
+}
+
+.timeline-time {
+  display: inline-block;
+  min-width: 62px;
+  color: #6f8497;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 720px) {
+  .attempt-head,
+  .attempt-summary {
+    grid-template-columns: 56px 1fr 0.7fr;
+  }
+
+  .cell-duration,
+  .cell-when {
+    display: none;
+  }
+}

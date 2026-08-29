@@ -59,11 +59,31 @@ describe('ProcedureMachine', () => {
 
     expect(machine.isComplete).toBe(true)
     expect(machine.snapshot().errors).toEqual([])
-    expect(machine.snapshot().completedStepIds).toEqual([
+    expect(machine.snapshot().completed.map((step) => step.id)).toEqual([
       'close-inlet',
       'close-outlet',
       'bleed-line',
       'hang-tag',
+    ])
+  })
+
+  it('timestamps each completed step so an attempt can be replayed', () => {
+    const clock = manualClock(1_000)
+    const machine = new ProcedureMachine(loadShippedProcedure(), clock.now)
+
+    machine.interact('valve_inlet')
+    clock.advance(4_000)
+    machine.interact('valve_outlet')
+    clock.advance(11_000)
+    machine.interact('bleed')
+    clock.advance(2_500)
+    machine.interact('tag_point')
+
+    expect(machine.snapshot().completed).toEqual([
+      { id: 'close-inlet', target: 'valve_inlet', at: 1_000 },
+      { id: 'close-outlet', target: 'valve_outlet', at: 5_000 },
+      { id: 'bleed-line', target: 'bleed', at: 16_000 },
+      { id: 'hang-tag', target: 'tag_point', at: 18_500 },
     ])
   })
 

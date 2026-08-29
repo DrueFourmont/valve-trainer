@@ -9,7 +9,6 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
  */
 
 const MODEL_URL = 'models/skid.glb'
-const DRACO_PATH = 'draco/'
 
 export async function loadSkid(
   onProgress: (fraction: number | null) => void,
@@ -26,8 +25,11 @@ export async function loadSkid(
     )
   }
 
+  // No setDecoderPath. Since r185 DRACOLoader locates its decoder with
+  // new URL(..., import.meta.url), which Vite resolves and emits at build time.
+  // Pointing it at a hand vendored copy instead makes the bundled one dead
+  // weight and the runtime fetch a path that has to be kept in sync by hand.
   const draco = new DRACOLoader()
-  draco.setDecoderPath(DRACO_PATH)
 
   const loader = new GLTFLoader()
   loader.setDRACOLoader(draco)

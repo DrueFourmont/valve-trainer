@@ -35,9 +35,16 @@ export interface ErrorRecord {
   expected: string
 }
 
+export interface CompletedStep {
+  id: string
+  target: string
+  /** Epoch milliseconds, so an attempt can be laid out on a timeline. */
+  at: number
+}
+
 export interface ProcedureState {
   currentIndex: number
-  completedStepIds: string[]
+  completed: CompletedStep[]
   errors: ErrorRecord[]
   startedAt: number | null
   finishedAt: number | null
@@ -85,7 +92,7 @@ export class ProcedureMachine {
     this.now = now
     this.state = {
       currentIndex: 0,
-      completedStepIds: [],
+      completed: [],
       errors: [],
       startedAt: null,
       finishedAt: null,
@@ -116,7 +123,7 @@ export class ProcedureMachine {
   snapshot(): ProcedureState {
     return {
       currentIndex: this.state.currentIndex,
-      completedStepIds: [...this.state.completedStepIds],
+      completed: this.state.completed.map((step) => ({ ...step })),
       errors: this.state.errors.map((error) => ({ ...error })),
       startedAt: this.state.startedAt,
       finishedAt: this.state.finishedAt,
@@ -136,7 +143,7 @@ export class ProcedureMachine {
     if (!step) return 'ignored'
 
     if (target === step.target) {
-      this.state.completedStepIds.push(step.id)
+      this.state.completed.push({ id: step.id, target: step.target, at: this.now() })
       this.state.currentIndex += 1
 
       if (this.state.currentIndex >= this.procedure.steps.length) {
