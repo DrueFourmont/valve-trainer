@@ -19,9 +19,9 @@ language and keep summaries short.
   are input adapters over it. Every behavior change in the procedure gets a
   Vitest test written first.
 - Every interactable is a named node: `valve_inlet`, `valve_outlet`, `bleed`,
-  `tag_point`. Positions come from the model, or from the single `LAYOUT` const
-  while the placeholder skid is still in use. Never scatter positions through
-  the code.
+  `tag_point`. Positions come from the model, read at load time. Never scatter
+  positions through the code and never hardcode one. The primitive placeholder
+  is gone; `public/models/skid.glb` is the only skid.
 - No console noise in production. Errors go to an on-screen toast.
 - Keep the whole thing small. No abstraction that exists for a future which is
   not in the current plan.

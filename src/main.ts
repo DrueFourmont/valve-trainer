@@ -79,12 +79,15 @@ async function boot(): Promise<void> {
   fillLight.position.set(-4, 3, -3)
   scene.add(fillLight)
 
-  const loaded = await loadSkid((fraction) => loading.setProgress(fraction))
-  const skid = loaded.root
-  scene.add(skid)
-  if (loaded.error) {
-    showToast(`Could not load skid.glb, using the placeholder. ${loaded.error}`, 'error', 0)
+  let skid: THREE.Object3D
+  try {
+    skid = await loadSkid((fraction) => loading.setProgress(fraction))
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    loading.fail(`Could not load the equipment. ${message}`)
+    return
   }
+  scene.add(skid)
 
   const { items, missing } = collectInteractables(skid, ALLOWED_TARGETS)
   if (missing.length > 0) {
@@ -96,7 +99,7 @@ async function boot(): Promise<void> {
   // the stem. That is easy to get wrong in an export and invisible until a
   // wheel tumbles instead of spinning, so report the real axis rather than
   // letting it be discovered by eye.
-  if (loaded.source === 'model') {
+  {
     const spin = new THREE.Vector3()
     const orientation = new THREE.Quaternion()
     for (const name of ROTATING_TARGETS) {
@@ -340,7 +343,7 @@ async function boot(): Promise<void> {
   }
 
   // Shows immediately, in either mode, so a stale page is obvious at a glance.
-  debugStatus(`mode ${mode} | ${loaded.source} | build ${__BUILD_ID__}`)
+  debugStatus(`mode ${mode} | build ${__BUILD_ID__}`)
   loading.dismiss()
 }
 

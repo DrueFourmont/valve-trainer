@@ -1,48 +1,29 @@
 import * as THREE from 'three'
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
-import { createSkid } from './skid'
 
 /**
- * Loads the authored skid, falling back to the primitive placeholder.
- *
- * The placeholder is a fallback, not a fixture: once skid.glb exists it is the
- * real model every time, and skid.ts gets deleted rather than kept in sync.
+ * Loads the authored skid. There is no placeholder any more: the model is the
+ * model, and a failure here is a real failure worth showing rather than
+ * something to paper over with primitives that would then need keeping in sync.
  */
 
 const MODEL_URL = 'models/skid.glb'
 const DRACO_PATH = 'draco/'
 
-export type SkidSource = 'model' | 'placeholder'
-
-export interface LoadedSkid {
-  root: THREE.Object3D
-  source: SkidSource
-  /** Set when a model was present but could not be used. */
-  error?: string
-}
-
 export async function loadSkid(
   onProgress: (fraction: number | null) => void,
-): Promise<LoadedSkid> {
-  // A missing file is the expected state until the model is authored, so it
-  // must not look like a failure. Anything else is a real error worth showing.
-  //
+): Promise<THREE.Object3D> {
   // Checking response.ok is not enough. Vite's dev server and most static hosts
   // answer an unknown path with index.html and a 200, so a missing model looks
-  // present and the GLTF parser then chokes on HTML and reports a bogus error.
-  // The content type is what actually distinguishes the two.
-  let present = false
-  try {
-    const head = await fetch(MODEL_URL, { method: 'HEAD' })
-    const contentType = head.headers.get('content-type') ?? ''
-    present = head.ok && !contentType.includes('text/html')
-  } catch {
-    present = false
-  }
-
-  if (!present) {
-    return { root: createSkid(), source: 'placeholder' }
+  // present and the GLTF parser then reports a confusing parse error instead of
+  // the real problem, which is that the file is not there.
+  const head = await fetch(MODEL_URL, { method: 'HEAD' })
+  const contentType = head.headers.get('content-type') ?? ''
+  if (!head.ok || contentType.includes('text/html')) {
+    throw new Error(
+      `${MODEL_URL} is not being served (${head.status}, ${contentType || 'no content type'})`,
+    )
   }
 
   const draco = new DRACOLoader()
@@ -56,10 +37,7 @@ export async function loadSkid(
       onProgress(event.lengthComputable ? event.loaded / event.total : null)
     })
     gltf.scene.name = 'skid'
-    return { root: gltf.scene, source: 'model' }
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error)
-    return { root: createSkid(), source: 'placeholder', error: message }
+    return gltf.scene
   } finally {
     draco.dispose()
   }

@@ -5,6 +5,8 @@
 export interface LoadingScreen {
   /** Fraction from 0 to 1, or null when the server sends no content length. */
   setProgress(fraction: number | null): void
+  /** Leaves the screen up carrying an explanation. Nothing else can run. */
+  fail(message: string): void
   dismiss(): void
 }
 
@@ -43,6 +45,12 @@ export function createLoadingScreen(): LoadingScreen {
       track.classList.remove('loading-indeterminate')
       bar.style.width = `${Math.round(Math.min(1, Math.max(0, fraction)) * 100)}%`
       detail.textContent = `Loading equipment ${Math.round(fraction * 100)}%`
+    },
+
+    fail(message: string): void {
+      track.remove()
+      detail.classList.add('loading-failed')
+      detail.textContent = message
     },
 
     dismiss(): void {

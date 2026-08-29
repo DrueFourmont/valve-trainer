@@ -265,3 +265,10 @@ canvas {
   color: #6f8497;
   font-variant-numeric: tabular-nums;
 }
+
+.loading-failed {
+  max-width: min(420px, calc(100vw - 48px));
+  color: #e08b7f;
+  text-align: center;
+  line-height: 1.45;
+}
