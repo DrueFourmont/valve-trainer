@@ -79,23 +79,44 @@ export function pickInteractable(
   return null
 }
 
-/** Holds whatever is currently lit up. Setting the same value twice is free. */
+/**
+ * Tracks what each input source is pointing at. Sources are independent, so
+ * the left and right controller can each light their own target, and an item
+ * stays lit while any source is still on it.
+ */
 export class Hover {
-  private current: Interactable | null = null
+  private bySource = new Map<string, Interactable>()
 
-  get name(): string | null {
-    return this.current?.name ?? null
+  itemFor(source: string): Interactable | null {
+    return this.bySource.get(source) ?? null
   }
 
-  get item(): Interactable | null {
-    return this.current
+  set(source: string, next: Interactable | null): void {
+    const previous = this.bySource.get(source) ?? null
+    if (previous === next) return
+
+    if (next) this.bySource.set(source, next)
+    else this.bySource.delete(source)
+
+    if (previous) this.repaint(previous)
+    if (next) this.repaint(next)
   }
 
-  set(next: Interactable | null): void {
-    if (next === this.current) return
-    if (this.current) paint(this.current, false)
-    this.current = next
-    if (this.current) paint(this.current, true)
+  clear(): void {
+    const lit = [...this.bySource.values()]
+    this.bySource.clear()
+    for (const item of lit) this.repaint(item)
+  }
+
+  private repaint(item: Interactable): void {
+    let lit = false
+    for (const value of this.bySource.values()) {
+      if (value === item) {
+        lit = true
+        break
+      }
+    }
+    paint(item, lit)
   }
 }
 

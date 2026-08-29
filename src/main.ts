@@ -90,7 +90,7 @@ if (mode === 'vr') {
   document.body.appendChild(VRButton.createButton(renderer))
   void reportXrSupport()
 
-  xrInput = setupXrInput({ renderer, rig, items, onInteract: interact })
+  xrInput = setupXrInput({ renderer, rig, hover, items, onInteract: interact })
 
   // Three writes the live headset pose straight into camera.position and
   // camera.quaternion on every frame of a session (setProjectionFromUnion in
@@ -117,7 +117,7 @@ if (mode === 'vr') {
     camera.aspect = window.innerWidth / window.innerHeight
     camera.updateProjectionMatrix()
     renderer.setSize(window.innerWidth, window.innerHeight)
-    hover.set(null)
+    hover.clear()
     controls.enabled = true
     controls.update()
   })
@@ -132,7 +132,7 @@ window.addEventListener('resize', () => {
 
 renderer.setAnimationLoop(() => {
   if (renderer.xr.isPresenting) {
-    if (xrInput) hover.set(xrInput.update())
+    xrInput?.update()
   } else {
     controls.update()
   }

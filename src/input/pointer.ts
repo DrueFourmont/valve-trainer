@@ -11,6 +11,8 @@ import { type Hover, type Interactable, pickInteractable } from './interactables
 /** CSS pixels of travel that turn a tap into an orbit drag. */
 const DRAG_THRESHOLD_PX = 10
 
+const SOURCE = 'pointer'
+
 export function setupPointerInput(opts: {
   domElement: HTMLElement
   camera: THREE.Camera
@@ -44,7 +46,7 @@ export function setupPointerInput(opts: {
     startY = event.clientY
     dragged = false
     pressedOn = pick(event)
-    hover.set(pressedOn)
+    hover.set(SOURCE, pressedOn)
   })
 
   domElement.addEventListener('pointermove', (event) => {
@@ -56,14 +58,14 @@ export function setupPointerInput(opts: {
         // Became an orbit drag. Drop the preview so nothing looks armed.
         dragged = true
         pressedOn = null
-        hover.set(null)
+        hover.set(SOURCE, null)
       }
       return
     }
 
     // A mouse can hover without pressing. A finger cannot, which is exactly
     // why press to preview exists.
-    if (event.pointerType === 'mouse') hover.set(pick(event))
+    if (event.pointerType === 'mouse') hover.set(SOURCE, pick(event))
   })
 
   domElement.addEventListener('pointerup', (event) => {
@@ -75,13 +77,13 @@ export function setupPointerInput(opts: {
     pressedOn = null
 
     // Leave the highlight up under a mouse cursor, clear it after a finger.
-    if (event.pointerType !== 'mouse') hover.set(null)
+    if (event.pointerType !== 'mouse') hover.set(SOURCE, null)
   })
 
   const cancel = () => {
     pressedOn = null
     dragged = false
-    hover.set(null)
+    hover.set(SOURCE, null)
   }
   domElement.addEventListener('pointercancel', cancel)
   domElement.addEventListener('pointerleave', cancel)

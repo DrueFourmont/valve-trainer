@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js'
-import { type Interactable, pickInteractable } from './interactables'
+import { type Hover, type Interactable, pickInteractable } from './interactables'
 
 /**
  * Controller adapter. Both hands get a rendered model and a ray. The ray is
@@ -30,10 +30,11 @@ function makeRay(): THREE.Line {
 export function setupXrInput(opts: {
   renderer: THREE.WebGLRenderer
   rig: THREE.Object3D
+  hover: Hover
   items: readonly Interactable[]
   onInteract: (name: string) => void
-}): { update: () => Interactable | null } {
-  const { renderer, rig, items, onInteract } = opts
+}): { update: () => void } {
+  const { renderer, rig, hover, items, onInteract } = opts
 
   const raycaster = new THREE.Raycaster()
   const rotation = new THREE.Matrix4()
@@ -49,7 +50,7 @@ export function setupXrInput(opts: {
     grip.add(modelFactory.createControllerModel(grip))
     rig.add(grip)
 
-    const hand = { controller, ray, hit: null as Interactable | null }
+    const hand = { controller, ray, source: `xr-${index}`, hit: null as Interactable | null }
 
     controller.addEventListener('selectstart', () => {
       if (hand.hit) onInteract(hand.hit.name)
@@ -59,10 +60,8 @@ export function setupXrInput(opts: {
   })
 
   return {
-    /** Raycast both hands. Returns whichever one is pointing at something. */
-    update(): Interactable | null {
-      let hovered: Interactable | null = null
-
+    /** Raycast both hands. Each hand lights its own target independently. */
+    update(): void {
       for (const hand of hands) {
         rotation.identity().extractRotation(hand.controller.matrixWorld)
         raycaster.ray.origin.setFromMatrixPosition(hand.controller.matrixWorld)
@@ -75,10 +74,8 @@ export function setupXrInput(opts: {
         hand.ray.scale.z = found ? found.distance : RAY_LENGTH
         material.color.setHex(found ? RAY_COLOR_HIT : RAY_COLOR)
 
-        if (found) hovered = found.item
+        hover.set(hand.source, hand.hit)
       }
-
-      return hovered
     },
   }
 }
