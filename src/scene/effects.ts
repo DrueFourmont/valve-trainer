@@ -71,9 +71,39 @@ export class Effects {
   }
 }
 
-const STEAM_COUNT = 90
+const STEAM_COUNT = 160
 
-/** One reusable particle burst. Vents from wherever the model puts the pipe. */
+/**
+ * A soft round sprite. Without this, Points renders hard squares, which read
+ * as confetti rather than vapour no matter how the motion is tuned.
+ */
+function softDotTexture(): THREE.CanvasTexture {
+  const size = 64
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+
+  const ctx = canvas.getContext('2d')!
+  const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2)
+  gradient.addColorStop(0, 'rgba(255, 255, 255, 0.95)')
+  gradient.addColorStop(0.35, 'rgba(255, 255, 255, 0.4)')
+  gradient.addColorStop(1, 'rgba(255, 255, 255, 0)')
+  ctx.fillStyle = gradient
+  ctx.fillRect(0, 0, size, size)
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  return texture
+}
+
+/**
+ * One reusable vent burst. Vents from wherever the model puts the pipe.
+ *
+ * Steam is a jet, not an explosion: particles go mostly up in a narrow cone,
+ * they are seeded at staggered points along their own path so the burst reads
+ * as continuous rather than as a single popped puff, and each one grows and
+ * thins as it rises.
+ */
 export class Steam {
   readonly points: THREE.Points
   private velocities: Float32Array
@@ -89,8 +119,9 @@ export class Steam {
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
 
     this.material = new THREE.PointsMaterial({
-      color: 0xdce7f0,
-      size: 0.07,
+      map: softDotTexture(),
+      color: 0xe8f0f7,
+      size: 0.09,
       transparent: true,
       opacity: 0,
       depthWrite: false,
@@ -105,24 +136,29 @@ export class Steam {
     const positions = this.points.geometry.getAttribute('position') as THREE.BufferAttribute
 
     for (let i = 0; i < STEAM_COUNT; i++) {
+      const angle = Math.random() * Math.PI * 2
+      // Narrow cone. Sideways speed is a fraction of the upward speed.
+      const spread = Math.random() * 0.34
+      const rise = 1.1 + Math.random() * 0.9
+
+      this.velocities[i * 3] = Math.cos(angle) * spread
+      this.velocities[i * 3 + 1] = rise
+      this.velocities[i * 3 + 2] = Math.sin(angle) * spread
+
+      // Seed each particle partway along its own path so the jet looks like it
+      // has been running, instead of every particle appearing at the nozzle.
+      const head = Math.random() * 0.4
       positions.setXYZ(
         i,
-        origin.x + (Math.random() - 0.5) * 0.08,
-        origin.y + (Math.random() - 0.5) * 0.08,
-        origin.z + (Math.random() - 0.5) * 0.08,
+        origin.x + this.velocities[i * 3] * head + (Math.random() - 0.5) * 0.05,
+        origin.y + this.velocities[i * 3 + 1] * head + (Math.random() - 0.5) * 0.05,
+        origin.z + this.velocities[i * 3 + 2] * head + (Math.random() - 0.5) * 0.05,
       )
-      // Mostly sideways and up, like a relief valve rather than a fountain.
-      const angle = Math.random() * Math.PI * 2
-      const spread = 0.5 + Math.random() * 0.9
-      this.velocities[i * 3] = Math.cos(angle) * spread
-      this.velocities[i * 3 + 1] = 0.7 + Math.random() * 1.1
-      this.velocities[i * 3 + 2] = Math.sin(angle) * spread
     }
 
     positions.needsUpdate = true
     this.elapsed = 0
     this.duration = durationMs
-    this.material.opacity = 0.85
   }
 
   update(deltaSeconds: number): void {
@@ -139,15 +175,18 @@ export class Steam {
         positions.getY(i) + this.velocities[i * 3 + 1] * deltaSeconds,
         positions.getZ(i) + this.velocities[i * 3 + 2] * deltaSeconds,
       )
-      // Slow down as it disperses.
-      this.velocities[i * 3] *= 0.97
-      this.velocities[i * 3 + 1] *= 0.98
-      this.velocities[i * 3 + 2] *= 0.97
+      // Loses speed sideways faster than it loses lift, so the plume narrows
+      // at the base and keeps drifting up as it thins out.
+      this.velocities[i * 3] *= 0.94
+      this.velocities[i * 3 + 1] *= 0.985
+      this.velocities[i * 3 + 2] *= 0.94
     }
     positions.needsUpdate = true
 
-    this.material.opacity = 0.85 * (1 - t)
-    this.material.size = 0.07 + t * 0.09
+    // Quick to appear, slow to clear, like something actually venting.
+    const fadeIn = Math.min(1, t / 0.12)
+    this.material.opacity = 0.5 * fadeIn * (1 - t) ** 1.4
+    this.material.size = 0.09 + t * 0.22
 
     if (t >= 1) this.duration = 0
   }
