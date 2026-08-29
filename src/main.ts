@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { VRButton } from 'three/addons/webxr/VRButton.js'
 import './style.css'
 import { createSkid } from './scene/skid'
+import { reportXrSupport } from './ui/xr-support'
 
 const mode = new URLSearchParams(location.search).get('mode') === 'vr' ? 'vr' : '2d'
 
@@ -57,14 +58,35 @@ if (mode === 'vr') {
   renderer.xr.enabled = true
   renderer.xr.setReferenceSpaceType('local-floor')
   document.body.appendChild(VRButton.createButton(renderer))
+  void reportXrSupport()
+
+  // Three writes the live headset pose straight into camera.position and
+  // camera.quaternion on every frame of a session (setProjectionFromUnion in
+  // WebXRManager), and it takes over the projection matrix too. None of that is
+  // undone on exit, so the desktop pose has to be saved going in and put back
+  // coming out, or you land wherever your head happened to be.
+  const savedPosition = new THREE.Vector3()
+  const savedQuaternion = new THREE.Quaternion()
+  const savedScale = new THREE.Vector3()
 
   renderer.xr.addEventListener('sessionstart', () => {
+    savedPosition.copy(camera.position)
+    savedQuaternion.copy(camera.quaternion)
+    savedScale.copy(camera.scale)
     controls.enabled = false
     rig.position.set(0, 0, 2.4) // stand off the skid, floor at y = 0
   })
+
   renderer.xr.addEventListener('sessionend', () => {
     rig.position.set(0, 0, 0)
+    camera.position.copy(savedPosition)
+    camera.quaternion.copy(savedQuaternion)
+    camera.scale.copy(savedScale)
+    camera.aspect = window.innerWidth / window.innerHeight
+    camera.updateProjectionMatrix()
+    renderer.setSize(window.innerWidth, window.innerHeight)
     controls.enabled = true
+    controls.update()
   })
 }
 
