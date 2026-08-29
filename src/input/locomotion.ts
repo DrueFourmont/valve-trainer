@@ -50,18 +50,9 @@ export function setupLocomotion(opts: {
   workAreaCenter: THREE.Vector3
   /** Solid equipment. The arc cannot pass through it. */
   obstacle: THREE.Box3
-  /** Temporary, for diagnosing controller input. Removed in phase 6. */
-  onDebug?: (text: string) => void
-  /** Temporary. One line per discrete event, so a drag can be read after it. */
-  onEvent?: (text: string) => void
 }): { update: () => void } {
-  const { renderer, scene, rig, camera, effects, workAreaCenter, obstacle, onDebug, onEvent } = opts
+  const { renderer, scene, rig, camera, effects, workAreaCenter, obstacle } = opts
 
-  let turnCount = 0
-  let peakAim = 0
-  let peakTurn = 0
-
-  const degrees = () => ((rig.rotation.y * 180) / Math.PI).toFixed(0)
 
   // getController returns a cached object per index, so listening here does not
   // interfere with the selection adapter listening to the same objects.
@@ -84,12 +75,22 @@ export function setupLocomotion(opts: {
   arc.visible = false
   scene.add(arc)
 
+  // Drawn over the top of the scene on purpose. A flat ring lying on the floor
+  // is hidden by the skid deck exactly when the student most needs to see where
+  // they are about to land.
   const marker = new THREE.Mesh(
-    new THREE.RingGeometry(0.17, 0.24, 32),
-    new THREE.MeshBasicMaterial({ color: VALID_COLOR, transparent: true, opacity: 0.85, side: THREE.DoubleSide }),
+    new THREE.RingGeometry(0.24, 0.34, 40),
+    new THREE.MeshBasicMaterial({
+      color: VALID_COLOR,
+      transparent: true,
+      opacity: 0.9,
+      side: THREE.DoubleSide,
+      depthTest: false,
+    }),
   )
   marker.name = 'teleport_marker'
   marker.rotation.x = -Math.PI / 2
+  marker.renderOrder = 10
   marker.visible = false
   scene.add(marker)
 
@@ -241,7 +242,6 @@ export function setupLocomotion(opts: {
           rig.position.x += destination.x - headBefore.x
           rig.position.z += destination.z - headBefore.z
           faceWorkArea(destination)
-          onEvent?.(`arrived facing work area, yaw ${degrees()}`)
         }
 
         fadeMaterial.opacity = 1 - (t - crossover) / (1 - crossover)
@@ -290,41 +290,27 @@ export function setupLocomotion(opts: {
 
       let aimAxis = 0
       let turnAxis = 0
-      const seen: string[] = []
 
       for (const source of session.inputSources) {
         const pad = source.gamepad
         if (!pad) continue
-        // xr-standard puts the thumbstick on axes 2 and 3. Fall back to 0 and 1
-        // for devices that only report a touchpad.
-        const x = pad.axes.length > 2 ? pad.axes[2] : (pad.axes[0] ?? 0)
-        const y = pad.axes.length > 3 ? pad.axes[3] : (pad.axes[1] ?? 0)
-        if (source.handedness === 'left') aimAxis = -y
-        if (source.handedness === 'right') turnAxis = x
 
-        const axes = Array.from(pad.axes ?? [], (value) =>
-          typeof value === 'number' ? value.toFixed(2) : String(value),
-        ).join(',')
-        seen.push(`${source.handedness}[${axes}]`)
-      }
+        // xr-standard puts the thumbstick on axes 2 and 3 and the touchpad on
+        // 0 and 1. Devices that have no touchpad report those first two slots
+        // as null rather than 0, which is not the same thing, so read
+        // defensively and fall back only when a slot is genuinely absent.
+        const read = (primary: number, fallback: number): number => {
+          const value = pad.axes[primary] ?? pad.axes[fallback]
+          return typeof value === 'number' ? value : 0
+        }
 
-      peakAim = Math.max(peakAim, Math.abs(aimAxis))
-      peakTurn = Math.max(peakTurn, Math.abs(turnAxis))
-
-      if (onDebug) {
-        onDebug(
-          `${seen.join(' ') || 'no gamepads'}\n` +
-            `aim ${aimAxis.toFixed(2)} peak ${peakAim.toFixed(2)} | ` +
-            `turn ${turnAxis.toFixed(2)} peak ${peakTurn.toFixed(2)}\n` +
-            `yaw ${degrees()} turns ${turnCount}`,
-        )
+        if (source.handedness === 'left') aimAxis = -read(3, 1)
+        if (source.handedness === 'right') turnAxis = read(2, 0)
       }
 
       if (Math.abs(turnAxis) > TURN_ON && turnArmed) {
         turnArmed = false
-        turnCount += 1
         snapTurn(-Math.sign(turnAxis) * SNAP_ANGLE)
-        onEvent?.(`snap turn ${turnCount} at axis ${turnAxis.toFixed(2)}, yaw now ${degrees()}`)
       } else if (Math.abs(turnAxis) < TURN_OFF) {
         turnArmed = true
       }
@@ -356,14 +342,7 @@ export function setupLocomotion(opts: {
         aiming = false
         const destination = target
         hideAim()
-        if (destination) {
-          onEvent?.(
-            `teleport to ${destination.x.toFixed(2)}, ${destination.z.toFixed(2)}, yaw ${degrees()}`,
-          )
-          teleport(destination)
-        } else {
-          onEvent?.('release with no valid target, not moving')
-        }
+        if (destination) teleport(destination)
       }
     },
   }
