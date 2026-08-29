@@ -13,8 +13,10 @@ const inVitest = process.env.VITEST === 'true'
 export default defineConfig({
   plugins: inVitest ? [] : [mkcert()],
   build: {
-    // A portfolio piece is meant to be read, so ship maps.
-    sourcemap: true,
+    // No source maps. Vercel answers .map requests with a 403 in production,
+    // so shipping them only advertises a file that cannot be fetched. Read the
+    // source on GitHub instead.
+    sourcemap: false,
     rollupOptions: {
       // Two pages: the trainer and the instructor view. Paths are relative to
       // the project root.
