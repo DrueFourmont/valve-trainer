@@ -1,38 +1,38 @@
 import { showToast } from './toast'
 
 /**
- * Temporary diagnostic for checkpoint 0. Three's VRButton only ever says
- * "VR NOT SUPPORTED", which does not distinguish "no WebXR in this browser"
- * from "WebXR present but no device". This says which. In phase 6 it becomes
- * the real unsupported message that falls back to 2D.
+ * Decides whether an immersive session is possible, and says so in plain
+ * language when it is not.
+ *
+ * A refusal here is not fatal. The scene, the procedure, and the scoring all
+ * work with mouse and touch, so an unsupported browser falls back to the 2D
+ * experience rather than showing a dead end.
  */
-export async function reportXrSupport(): Promise<void> {
+export async function canEnterVr(): Promise<boolean> {
   if (!window.isSecureContext) {
-    showToast('Not a secure context, so WebXR is blocked. Use the https URL.', 'error', 0)
-    return
+    showToast('WebXR needs a secure connection. Open this page over https.', 'error', 0)
+    return false
   }
 
   if (!navigator.xr) {
     showToast(
-      'navigator.xr is missing. This browser is not exposing WebXR at all, which means the Immersive Web Emulator is not injecting into this page. Check that the extension is enabled, then hard reload.',
-      'error',
-      0,
+      'This browser does not support WebXR, so the trainer is running in 2D. Drag to look around and tap the handles. For VR, open this page in the Meta Quest browser.',
+      'info',
+      12000,
     )
-    return
+    return false
   }
 
   try {
-    const supported = await navigator.xr.isSessionSupported('immersive-vr')
-    if (supported) {
-      showToast('WebXR ready. immersive-vr is supported, so ENTER VR should work.', 'info', 6000)
-    } else {
-      showToast(
-        'navigator.xr exists but immersive-vr is not supported. The emulator is loaded but has no headset selected, or you are in plain Chrome with no headset. Pick a device in the WebXR panel and reload.',
-        'error',
-        0,
-      )
-    }
-  } catch (err) {
-    showToast(`WebXR support check failed: ${String(err)}`, 'error', 0)
+    if (await navigator.xr.isSessionSupported('immersive-vr')) return true
+    showToast(
+      'No VR headset is available, so the trainer is running in 2D. Drag to look around and tap the handles.',
+      'info',
+      12000,
+    )
+    return false
+  } catch {
+    showToast('Could not check for VR support, so the trainer is running in 2D.', 'info', 12000)
+    return false
   }
 }

@@ -11,13 +11,10 @@ import mkcert from 'vite-plugin-mkcert'
 const inVitest = process.env.VITEST === 'true'
 
 export default defineConfig({
-  // Temporary, alongside the debug overlay. Lets a stale browser tab be spotted
-  // instantly instead of being mistaken for a bug. Removed in phase 6.
-  define: {
-    __BUILD_ID__: JSON.stringify(new Date().toISOString().slice(11, 19)),
-  },
   plugins: inVitest ? [] : [mkcert()],
   build: {
+    // A portfolio piece is meant to be read, so ship maps.
+    sourcemap: true,
     rollupOptions: {
       // Two pages: the trainer and the instructor view. Paths are relative to
       // the project root.

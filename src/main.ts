@@ -14,13 +14,12 @@ import { Effects, Steam } from './scene/effects'
 import { createWristHud, type WristHud } from './scene/hud-wrist'
 import { loadSkid } from './scene/load-skid'
 import { createWorldPanel } from './scene/world-panel'
-import { debugLog, debugStatus } from './ui/debug-overlay'
 import type { StepView } from './ui/hud'
 import { createHud2d } from './ui/hud-2d'
 import { createLoadingScreen } from './ui/loading-screen'
 import { showScorePanel } from './ui/score-panel'
 import { showToast } from './ui/toast'
-import { reportXrSupport } from './ui/xr-support'
+import { canEnterVr } from './ui/xr-support'
 
 const mode = new URLSearchParams(location.search).get('mode') === 'vr' ? 'vr' : '2d'
 
@@ -49,7 +48,19 @@ async function boot(): Promise<void> {
   const app = document.querySelector<HTMLDivElement>('#app')!
   const loading = createLoadingScreen()
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true })
+  // Old hardware, a GPU blocklist, or hardware acceleration turned off all end
+  // up here. Without this the page is simply blank with an error only a
+  // developer would ever see.
+  let renderer: THREE.WebGLRenderer
+  try {
+    renderer = new THREE.WebGLRenderer({ antialias: true })
+  } catch {
+    loading.fail(
+      'This browser could not start 3D graphics. Check that hardware acceleration is enabled in your browser settings, or try Chrome or Safari on another device.',
+    )
+    return
+  }
+
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.setSize(window.innerWidth, window.innerHeight)
   app.appendChild(renderer.domElement)
@@ -100,20 +111,26 @@ async function boot(): Promise<void> {
   const itemsByName = new Map(items.map((item) => [item.name, item]))
 
   // Handles turn about their own local Y, so the model has to put local Y along
-  // the stem. That is easy to get wrong in an export and invisible until a
-  // wheel tumbles instead of spinning, so report the real axis rather than
-  // letting it be discovered by eye.
+  // the stem. Getting that wrong is invisible until a wheel tumbles instead of
+  // turning, so check it on load and say so rather than leaving it to be found
+  // in a headset. The asset test covers this too; this catches a model swapped
+  // in after the tests last ran.
   {
     const spin = new THREE.Vector3()
     const orientation = new THREE.Quaternion()
+    const askew: string[] = []
     for (const name of ROTATING_TARGETS) {
       const item = itemsByName.get(name)
       if (!item) continue
       item.object.getWorldQuaternion(orientation)
       spin.set(0, 1, 0).applyQuaternion(orientation).normalize()
-      const vertical = Math.abs(spin.y) > 0.98 ? 'vertical' : 'NOT vertical'
-      debugLog(
-        `${name} spin axis ${spin.x.toFixed(2)}, ${spin.y.toFixed(2)}, ${spin.z.toFixed(2)} (${vertical})`,
+      if (Math.abs(spin.y) < 0.98) askew.push(name)
+    }
+    if (askew.length > 0) {
+      showToast(
+        `These handles do not turn about a vertical axis and will look wrong: ${askew.join(', ')}. Fix the object rotation in Blender rather than in code.`,
+        'error',
+        0,
       )
     }
   }
@@ -156,7 +173,6 @@ async function boot(): Promise<void> {
     const view = currentView()
     hud2d.update(view)
     wristHud?.update(view)
-    if (view) debugLog(`step ${view.number} of ${view.total}: ${view.label}`)
   }
 
   function showCompletion(finished: ProcedureMachine): void {
@@ -189,6 +205,8 @@ async function boot(): Promise<void> {
     window.setTimeout(() => {
       playSuccess()
       if (renderer.xr.isPresenting) {
+        // Leaving and re-entering a session would otherwise stack panels.
+        rig.getObjectByName('score_panel')?.removeFromParent()
         const panel = createWorldPanel(summary)
         panel.position.set(0, 1.45, -1.5)
         rig.add(panel)
@@ -203,7 +221,6 @@ async function boot(): Promise<void> {
     if (!machine) return
 
     const result = machine.interact(name)
-    debugLog(`interact ${name} -> ${result}`)
 
     const item = itemsByName.get(name)
     if (!item) return
@@ -252,11 +269,12 @@ async function boot(): Promise<void> {
   let xrInput: ReturnType<typeof setupXrInput> | null = null
   let locomotion: ReturnType<typeof setupLocomotion> | null = null
 
-  if (mode === 'vr') {
+  // An unsupported browser falls through to the 2D experience rather than
+  // showing a dead ENTER VR button, and canEnterVr explains why in plain words.
+  if (mode === 'vr' && (await canEnterVr())) {
     renderer.xr.enabled = true
     renderer.xr.setReferenceSpaceType('local-floor')
     document.body.appendChild(VRButton.createButton(renderer))
-    void reportXrSupport()
 
     wristHud = createWristHud()
     xrInput = setupXrInput({
@@ -346,8 +364,7 @@ async function boot(): Promise<void> {
       const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error)
       if (message !== lastLoopError) {
         lastLoopError = message
-        debugLog(`loop error: ${message}`)
-        showToast(`Frame error: ${message}`, 'error', 0)
+        showToast(`Something went wrong while drawing. ${message}`, 'error', 0)
       }
     }
 
@@ -363,8 +380,6 @@ async function boot(): Promise<void> {
     showToast(`Could not load the procedure: ${String(error)}`, 'error', 0)
   }
 
-  // Shows immediately, in either mode, so a stale page is obvious at a glance.
-  debugStatus(`mode ${mode} | build ${__BUILD_ID__}`)
   loading.dismiss()
 }
 
