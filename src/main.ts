@@ -2,7 +2,12 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { VRButton } from 'three/addons/webxr/VRButton.js'
 import './style.css'
-import { createSkid } from './scene/skid'
+import { Hover, collectInteractables } from './input/interactables'
+import { setupPointerInput } from './input/pointer'
+import { setupXrInput } from './input/xr'
+import { HANDLE_NAMES, createSkid } from './scene/skid'
+import { debugLog } from './ui/debug-overlay'
+import { showToast } from './ui/toast'
 import { reportXrSupport } from './ui/xr-support'
 
 const mode = new URLSearchParams(location.search).get('mode') === 'vr' ? 'vr' : '2d'
@@ -23,7 +28,7 @@ camera.position.set(2.4, 1.75, 2.6)
 
 // In an XR session the headset pose replaces camera.position outright; the only
 // thing that still offsets it is the camera's parent. So the rig is how the
-// player gets placed in either mode.
+// player gets placed, and it is also what controllers have to hang off.
 const rig = new THREE.Group()
 rig.name = 'player_rig'
 rig.add(camera)
@@ -43,7 +48,21 @@ const fillLight = new THREE.DirectionalLight(0xbcd2e8, 0.5)
 fillLight.position.set(-4, 3, -3)
 scene.add(fillLight)
 
-scene.add(createSkid())
+const skid = createSkid()
+scene.add(skid)
+
+const { items, missing } = collectInteractables(skid, HANDLE_NAMES)
+if (missing.length > 0) {
+  showToast(`Missing interactable nodes: ${missing.join(', ')}`, 'error', 0)
+}
+
+const hover = new Hover()
+
+// The one interact function. Both input adapters call this and nothing else.
+// Phase 2 replaces the body with the procedure state machine.
+function interact(name: string): void {
+  debugLog(`interact ${name}`)
+}
 
 const controls = new OrbitControls(camera, renderer.domElement)
 controls.target.set(0, 0.85, 0)
@@ -54,11 +73,24 @@ controls.maxDistance = 12
 controls.maxPolarAngle = Math.PI * 0.495 // stay above the floor plane
 controls.update()
 
+setupPointerInput({
+  domElement: renderer.domElement,
+  camera,
+  hover,
+  items,
+  onInteract: interact,
+  isSuspended: () => renderer.xr.isPresenting,
+})
+
+let xrInput: ReturnType<typeof setupXrInput> | null = null
+
 if (mode === 'vr') {
   renderer.xr.enabled = true
   renderer.xr.setReferenceSpaceType('local-floor')
   document.body.appendChild(VRButton.createButton(renderer))
   void reportXrSupport()
+
+  xrInput = setupXrInput({ renderer, rig, items, onInteract: interact })
 
   // Three writes the live headset pose straight into camera.position and
   // camera.quaternion on every frame of a session (setProjectionFromUnion in
@@ -85,6 +117,7 @@ if (mode === 'vr') {
     camera.aspect = window.innerWidth / window.innerHeight
     camera.updateProjectionMatrix()
     renderer.setSize(window.innerWidth, window.innerHeight)
+    hover.set(null)
     controls.enabled = true
     controls.update()
   })
@@ -98,6 +131,10 @@ window.addEventListener('resize', () => {
 })
 
 renderer.setAnimationLoop(() => {
-  if (!renderer.xr.isPresenting) controls.update()
+  if (renderer.xr.isPresenting) {
+    if (xrInput) hover.set(xrInput.update())
+  } else {
+    controls.update()
+  }
   renderer.render(scene, camera)
 })
