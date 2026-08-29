@@ -34,7 +34,11 @@ controller rays, wrist panel, trigger selection, and the world space score
 panel. None of it has been through a real Quest.
 
 The live link runs on any Quest browser, so it can be tried on hardware
-directly. If something is wrong on a real device, the likely candidates are
+directly. To try the VR path without a headset, install the Immersive Web
+Emulator extension for Chrome, then open its Details page in `chrome://extensions`
+and set Site access to "On all sites". By default the extension is not permitted
+on every origin, and without that it will not inject WebXR, so the page falls
+back to 2D and no ENTER VR button appears. If something is wrong on a real device, the likely candidates are
 comfort details that an emulator cannot show: teleport arc distance, the wrist
 panel angle, and text size at arm's length.
 
