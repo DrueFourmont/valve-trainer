@@ -1,60 +1,81 @@
+import * as THREE from 'three'
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { VRButton } from 'three/addons/webxr/VRButton.js'
 import './style.css'
-import heroImg from './assets/hero.png'
-import typescriptLogo from './assets/typescript.svg'
-import viteLogo from './assets/vite.svg'
-import { setupCounter } from './counter.ts'
+import { createSkid } from './scene/skid'
 
-document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
-<section id="center">
-  <div class="hero">
-    <img src="${heroImg}" class="base" width="170" height="179">
-    <img src="${typescriptLogo}" class="framework" alt="TypeScript logo"/>
-    <img src="${viteLogo}" class="vite" alt="Vite logo" />
-  </div>
-  <div>
-    <h1>Get started</h1>
-    <p>Edit <code>src/main.ts</code> and save to test <code>HMR</code></p>
-  </div>
-  <button id="counter" type="button" class="counter"></button>
-</section>
+const mode = new URLSearchParams(location.search).get('mode') === 'vr' ? 'vr' : '2d'
 
-<div class="ticks"></div>
+const app = document.querySelector<HTMLDivElement>('#app')!
 
-<section id="next-steps">
-  <div id="docs">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#documentation-icon"></use></svg>
-    <h2>Documentation</h2>
-    <p>Your questions, answered</p>
-    <ul>
-      <li>
-        <a href="https://vite.dev/" target="_blank">
-          <img class="logo" src="${viteLogo}" alt="" />
-          Explore Vite
-        </a>
-      </li>
-      <li>
-        <a href="https://www.typescriptlang.org" target="_blank">
-          <img class="button-icon" src="${typescriptLogo}" alt="">
-          Learn more
-        </a>
-      </li>
-    </ul>
-  </div>
-  <div id="social">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#social-icon"></use></svg>
-    <h2>Connect with us</h2>
-    <p>Join the Vite community</p>
-    <ul>
-      <li><a href="https://github.com/vitejs/vite" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#github-icon"></use></svg>GitHub</a></li>
-      <li><a href="https://chat.vite.dev/" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#discord-icon"></use></svg>Discord</a></li>
-      <li><a href="https://x.com/vite_js" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#x-icon"></use></svg>X.com</a></li>
-      <li><a href="https://bsky.app/profile/vite.dev" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#bluesky-icon"></use></svg>Bluesky</a></li>
-    </ul>
-  </div>
-</section>
+const renderer = new THREE.WebGLRenderer({ antialias: true })
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+renderer.setSize(window.innerWidth, window.innerHeight)
+app.appendChild(renderer.domElement)
 
-<div class="ticks"></div>
-<section id="spacer"></section>
-`
+const scene = new THREE.Scene()
+scene.background = new THREE.Color(0x0e1216)
+scene.fog = new THREE.Fog(0x0e1216, 9, 26)
 
-setupCounter(document.querySelector<HTMLButtonElement>('#counter')!)
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.05, 100)
+camera.position.set(2.4, 1.75, 2.6)
+
+// In an XR session the headset pose replaces camera.position outright; the only
+// thing that still offsets it is the camera's parent. So the rig is how the
+// player gets placed in either mode.
+const rig = new THREE.Group()
+rig.name = 'player_rig'
+rig.add(camera)
+scene.add(rig)
+
+const grid = new THREE.GridHelper(24, 24, 0x51606d, 0x262d34)
+grid.name = 'floor_grid'
+scene.add(grid)
+
+scene.add(new THREE.HemisphereLight(0xa8c0d6, 0x24282d, 1.1))
+
+const keyLight = new THREE.DirectionalLight(0xffffff, 2)
+keyLight.position.set(3.5, 6, 4)
+scene.add(keyLight)
+
+const fillLight = new THREE.DirectionalLight(0xbcd2e8, 0.5)
+fillLight.position.set(-4, 3, -3)
+scene.add(fillLight)
+
+scene.add(createSkid())
+
+const controls = new OrbitControls(camera, renderer.domElement)
+controls.target.set(0, 0.85, 0)
+controls.enableDamping = true
+controls.dampingFactor = 0.08
+controls.minDistance = 1
+controls.maxDistance = 12
+controls.maxPolarAngle = Math.PI * 0.495 // stay above the floor plane
+controls.update()
+
+if (mode === 'vr') {
+  renderer.xr.enabled = true
+  renderer.xr.setReferenceSpaceType('local-floor')
+  document.body.appendChild(VRButton.createButton(renderer))
+
+  renderer.xr.addEventListener('sessionstart', () => {
+    controls.enabled = false
+    rig.position.set(0, 0, 2.4) // stand off the skid, floor at y = 0
+  })
+  renderer.xr.addEventListener('sessionend', () => {
+    rig.position.set(0, 0, 0)
+    controls.enabled = true
+  })
+}
+
+window.addEventListener('resize', () => {
+  if (renderer.xr.isPresenting) return
+  camera.aspect = window.innerWidth / window.innerHeight
+  camera.updateProjectionMatrix()
+  renderer.setSize(window.innerWidth, window.innerHeight)
+})
+
+renderer.setAnimationLoop(() => {
+  if (!renderer.xr.isPresenting) controls.update()
+  renderer.render(scene, camera)
+})
