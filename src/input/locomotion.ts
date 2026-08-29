@@ -42,12 +42,14 @@ export function setupLocomotion(opts: {
   effects: Effects
   /** Floor level centre of the work area, taken from the model bounds. */
   workAreaCenter: THREE.Vector3
+  /** Solid equipment. The arc cannot pass through it. */
+  obstacle: THREE.Box3
   /** Temporary, for diagnosing controller input. Removed in phase 6. */
   onDebug?: (text: string) => void
   /** Temporary. One line per discrete event, so a drag can be read after it. */
   onEvent?: (text: string) => void
 }): { update: () => void } {
-  const { renderer, scene, rig, camera, effects, workAreaCenter, onDebug, onEvent } = opts
+  const { renderer, scene, rig, camera, effects, workAreaCenter, obstacle, onDebug, onEvent } = opts
 
   let turnCount = 0
   let peakAim = 0
@@ -166,6 +168,13 @@ export function setupLocomotion(opts: {
       arcPositions[i * 3 + 1] = cursor.y
       arcPositions[i * 3 + 2] = cursor.z
       count = i + 1
+
+      // The skid is solid. Without this the arc sails straight through it and
+      // drops the student on the far side, facing away from the equipment.
+      if (obstacle.containsPoint(cursor)) {
+        hit = false
+        break
+      }
 
       if (cursor.y <= 0) {
         landing.set(cursor.x, 0, cursor.z)
