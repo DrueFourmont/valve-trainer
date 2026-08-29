@@ -86,6 +86,12 @@ const steamOrigin = new THREE.Vector3(0, 1, 0)
 const ventNode = skid.getObjectByName('bleed') ?? skid.getObjectByName('pipe_run')
 ventNode?.getWorldPosition(steamOrigin)
 
+// Work area is centred on the equipment, measured rather than assumed, so it
+// still lands correctly when the placeholder is swapped for the real GLB.
+const workAreaCenter = new THREE.Vector3()
+new THREE.Box3().setFromObject(skid).getCenter(workAreaCenter)
+workAreaCenter.y = 0
+
 const hover = new Hover()
 let machine: ProcedureMachine | null = null
 
@@ -208,7 +214,7 @@ if (mode === 'vr') {
     onInteract: interact,
     wristMount: wristHud.mesh,
   })
-  locomotion = setupLocomotion({ renderer, scene, rig, camera, effects })
+  locomotion = setupLocomotion({ renderer, scene, rig, camera, effects, workAreaCenter })
 
   // Three writes the live headset pose straight into camera.position and
   // camera.quaternion on every frame of a session (setProjectionFromUnion in

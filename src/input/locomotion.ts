@@ -12,8 +12,14 @@ import type { Effects } from '../scene/effects'
 
 const TELEPORT_SPEED = 6
 const GRAVITY = 9.8
-const MAX_RANGE_M = 8
 const ARC_POINTS = 96
+
+/**
+ * How far from the skid a student may stand. A real training bay paints this
+ * on the floor, and it stops a steeply aimed arc from dropping someone behind
+ * the equipment facing the wrong way. The centre is read from the model.
+ */
+const WORK_AREA_RADIUS_M = 3.5
 
 /** Push past ON to act, fall back under OFF before it can act again. */
 const AIM_ON = 0.6
@@ -34,8 +40,10 @@ export function setupLocomotion(opts: {
   rig: THREE.Object3D
   camera: THREE.PerspectiveCamera
   effects: Effects
+  /** Floor level centre of the work area, taken from the model bounds. */
+  workAreaCenter: THREE.Vector3
 }): { update: () => void } {
-  const { renderer, scene, rig, camera, effects } = opts
+  const { renderer, scene, rig, camera, effects, workAreaCenter } = opts
 
   // getController returns a cached object per index, so listening here does not
   // interfere with the selection adapter listening to the same objects.
@@ -66,6 +74,22 @@ export function setupLocomotion(opts: {
   marker.rotation.x = -Math.PI / 2
   marker.visible = false
   scene.add(marker)
+
+  // Shown only while aiming, so a red arc has a visible reason.
+  const boundary = new THREE.Mesh(
+    new THREE.RingGeometry(WORK_AREA_RADIUS_M - 0.04, WORK_AREA_RADIUS_M, 72),
+    new THREE.MeshBasicMaterial({
+      color: 0x4f6474,
+      transparent: true,
+      opacity: 0.5,
+      side: THREE.DoubleSide,
+    }),
+  )
+  boundary.name = 'work_area'
+  boundary.rotation.x = -Math.PI / 2
+  boundary.position.set(workAreaCenter.x, 0.005, workAreaCenter.z)
+  boundary.visible = false
+  scene.add(boundary)
 
   // Fade sphere rides on the head so the teleport itself is never seen.
   const fade = new THREE.Mesh(
@@ -123,8 +147,14 @@ export function setupLocomotion(opts: {
 
       if (cursor.y <= 0) {
         landing.set(cursor.x, 0, cursor.z)
-        const reach = Math.hypot(landing.x - origin.x, landing.z - origin.z)
-        hit = reach <= MAX_RANGE_M
+        // Only the work area matters. Checking distance from the student was
+        // the original mistake: it said nothing about direction, so a steep
+        // aim could legally drop them behind the skid facing away from it.
+        const fromCentre = Math.hypot(
+          landing.x - workAreaCenter.x,
+          landing.z - workAreaCenter.z,
+        )
+        hit = fromCentre <= WORK_AREA_RADIUS_M
         break
       }
 
@@ -138,6 +168,7 @@ export function setupLocomotion(opts: {
   function hideAim(): void {
     arc.visible = false
     marker.visible = false
+    boundary.visible = false
     target = null
   }
 
@@ -225,6 +256,7 @@ export function setupLocomotion(opts: {
         arcGeometry.computeBoundingSphere()
 
         arc.visible = true
+        boundary.visible = true
         arcMaterial.color.setHex(hit ? VALID_COLOR : INVALID_COLOR)
         marker.visible = hit
         if (hit) marker.position.set(landing.x, 0.01, landing.z)
