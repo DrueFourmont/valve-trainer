@@ -6,20 +6,24 @@ import { type Hud, type StepView, trackerText } from '../ui/hud'
  * canvas on a plane parented to the left controller grip.
  *
  * Sizing, since VR text is judged in degrees of arc and not pixels. The canvas
- * is 640 px wide drawn onto a 0.22 m plane, so 1 px is about 0.34 mm. The step
- * label at 46 px is therefore about 15.8 mm tall. Read at roughly 0.35 m, the
- * distance to your own raised wrist, that is about 2.6 degrees of arc. Text
+ * is 640 px wide drawn onto a 0.17 m plane, so 1 px is about 0.27 mm. The step
+ * label at 46 px is therefore about 12.2 mm tall. Read at roughly 0.35 m, the
+ * distance to your own raised wrist, that is about 2.0 degrees of arc. Text
  * starts to strain below about 1 degree, and the Quest 3S panel is softer than
- * a monitor, so this leaves real headroom. The 30 px hint works out near 1.7
- * degrees, still comfortable, and deliberately quieter than the label.
+ * a monitor, so this still leaves headroom. The 30 px hint works out near 1.3
+ * degrees, readable and deliberately quieter than the label.
  */
 
 const CANVAS_WIDTH = 640
 const CANVAS_HEIGHT = 360
-const PANEL_WIDTH_M = 0.22
+const PANEL_WIDTH_M = 0.17
 
-/** Where the panel sits relative to the grip. Tuned by looking, not by theory. */
-const MOUNT_POSITION = new THREE.Vector3(0, 0.04, -0.09)
+/**
+ * Where the panel sits relative to the grip. Grip space points -Z out along
+ * the direction the hand is aimed, so +Z is back toward the wrist. The first
+ * attempt used -Z and the panel floated out in front of the hand like a sign.
+ */
+const MOUNT_POSITION = new THREE.Vector3(0, 0.02, 0.07)
 const MOUNT_TILT_RAD = -Math.PI / 3
 
 function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
