@@ -18,7 +18,17 @@ export class Effects {
 
   update(deltaSeconds: number): void {
     if (this.tweens.length === 0) return
-    this.tweens = this.tweens.filter((tween) => tween(deltaSeconds))
+
+    // Swap the list out before running anything. A tween's completion callback
+    // is allowed to queue another tween, which is how the teleport chains fade
+    // out into fade in, and those additions have to land on the new list rather
+    // than on one that is about to be thrown away.
+    const running = this.tweens
+    this.tweens = []
+
+    for (const tween of running) {
+      if (tween(deltaSeconds)) this.tweens.push(tween)
+    }
   }
 
   /** Generic timed tween. Used by the teleport fade. */
