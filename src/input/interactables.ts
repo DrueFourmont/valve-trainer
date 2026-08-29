@@ -108,6 +108,11 @@ export class Hover {
     for (const item of lit) this.repaint(item)
   }
 
+  /** Re-apply the correct colour after something else borrowed the material. */
+  refresh(item: Interactable): void {
+    this.repaint(item)
+  }
+
   private repaint(item: Interactable): void {
     let lit = false
     for (const value of this.bySource.values()) {

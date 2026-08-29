@@ -2,15 +2,28 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { VRButton } from 'three/addons/webxr/VRButton.js'
 import './style.css'
+import { playBuzzer, playClick, playSuccess } from './audio/sfx'
 import { Hover, collectInteractables } from './input/interactables'
 import { setupPointerInput } from './input/pointer'
 import { setupXrInput } from './input/xr'
-import { HANDLE_NAMES, createSkid } from './scene/skid'
+import { ALLOWED_TARGETS, ProcedureMachine, type Procedure, parseProcedure } from './procedure/machine'
+import { scoreAttempt } from './procedure/score'
+import { Effects, Steam } from './scene/effects'
+import { createSkid } from './scene/skid'
+import { createWorldPanel } from './scene/world-panel'
 import { debugLog } from './ui/debug-overlay'
+import { showScorePanel } from './ui/score-panel'
 import { showToast } from './ui/toast'
 import { reportXrSupport } from './ui/xr-support'
 
 const mode = new URLSearchParams(location.search).get('mode') === 'vr' ? 'vr' : '2d'
+
+/** Handles turn clockwise seen from above, which is closing. The tag hangs. */
+const ROTATING_TARGETS = new Set(['valve_inlet', 'valve_outlet', 'bleed'])
+const CLOSE_ROTATION = -Math.PI / 2
+const ROTATE_MS = 400
+const PULSE_MS = 500
+const STEAM_MS = 1000
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 
@@ -51,17 +64,85 @@ scene.add(fillLight)
 const skid = createSkid()
 scene.add(skid)
 
-const { items, missing } = collectInteractables(skid, HANDLE_NAMES)
+const { items, missing } = collectInteractables(skid, ALLOWED_TARGETS)
 if (missing.length > 0) {
   showToast(`Missing interactable nodes: ${missing.join(', ')}`, 'error', 0)
 }
+const itemsByName = new Map(items.map((item) => [item.name, item]))
+
+const effects = new Effects()
+const steam = new Steam()
+scene.add(steam.points)
+
+// House rule: read positions from the model. The vent comes off the pipe run,
+// wherever the model happens to put it.
+const steamOrigin = new THREE.Vector3(0, 1, 0)
+skid.getObjectByName('pipe_run')?.getWorldPosition(steamOrigin)
 
 const hover = new Hover()
+let machine: ProcedureMachine | null = null
+
+function announceStep(): void {
+  if (!machine) return
+  const step = machine.currentStep
+  if (step) debugLog(`step ${machine.stepNumber} of ${machine.totalSteps}: ${step.label}`)
+}
+
+function showCompletion(finished: ProcedureMachine): void {
+  const durationSeconds = (finished.durationMs() ?? 0) / 1000
+  const errorCount = finished.snapshot().errors.length
+  const summary = {
+    title: finished.procedure.title,
+    score: scoreAttempt({
+      errorCount,
+      durationSeconds,
+      targetSeconds: finished.procedure.targetSeconds,
+    }),
+    durationSeconds,
+    errorCount,
+  }
+
+  // Let the last handle finish turning before the result lands.
+  window.setTimeout(() => {
+    playSuccess()
+    if (renderer.xr.isPresenting) {
+      const panel = createWorldPanel(summary)
+      panel.position.set(0, 1.45, -1.5)
+      rig.add(panel)
+    } else {
+      showScorePanel(summary)
+    }
+  }, ROTATE_MS + 120)
+}
 
 // The one interact function. Both input adapters call this and nothing else.
-// Phase 2 replaces the body with the procedure state machine.
 function interact(name: string): void {
-  debugLog(`interact ${name}`)
+  if (!machine) return
+
+  const result = machine.interact(name)
+  debugLog(`interact ${name} -> ${result}`)
+
+  const item = itemsByName.get(name)
+  if (!item) return
+
+  if (result === 'advanced' || result === 'complete') {
+    playClick()
+    if (ROTATING_TARGETS.has(name)) effects.rotate(item.object, CLOSE_ROTATION, ROTATE_MS)
+    else effects.drop(item.object, 0.06, ROTATE_MS)
+  }
+
+  if (result === 'wrong') {
+    playBuzzer()
+    effects.pulse(item, 0xd8322a, PULSE_MS, () => hover.refresh(item))
+    steam.burst(steamOrigin, STEAM_MS)
+  }
+
+  if (result === 'complete') {
+    hover.clear()
+    showCompletion(machine)
+  } else {
+    announceStep()
+  }
 }
 
 const controls = new OrbitControls(camera, renderer.domElement)
@@ -73,13 +154,16 @@ controls.maxDistance = 12
 controls.maxPolarAngle = Math.PI * 0.495 // stay above the floor plane
 controls.update()
 
+/** Completion freezes interaction, and XR owns highlighting during a session. */
+const inputSuspended = () => renderer.xr.isPresenting || (machine?.isComplete ?? false)
+
 setupPointerInput({
   domElement: renderer.domElement,
   camera,
   hover,
   items,
   onInteract: interact,
-  isSuspended: () => renderer.xr.isPresenting,
+  isSuspended: inputSuspended,
 })
 
 let xrInput: ReturnType<typeof setupXrInput> | null = null
@@ -130,11 +214,35 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight)
 })
 
+const clock = new THREE.Clock()
+
 renderer.setAnimationLoop(() => {
+  const delta = clock.getDelta()
+
   if (renderer.xr.isPresenting) {
-    xrInput?.update()
+    if (machine?.isComplete) hover.clear()
+    else xrInput?.update()
   } else {
     controls.update()
   }
+
+  effects.update(delta)
+  steam.update(delta)
   renderer.render(scene, camera)
 })
+
+async function loadProcedure(): Promise<Procedure> {
+  const response = await fetch('procedures/valve-isolation.json')
+  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  return parseProcedure(await response.json())
+}
+
+loadProcedure()
+  .then((procedure) => {
+    machine = new ProcedureMachine(procedure)
+    machine.start()
+    announceStep()
+  })
+  .catch((error: unknown) => {
+    showToast(`Could not load the procedure: ${String(error)}`, 'error', 0)
+  })
