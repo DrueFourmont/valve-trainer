@@ -3,7 +3,7 @@
     "target": "es2023",
     "module": "esnext",
     "lib": ["ES2023", "DOM"],
-    "types": ["vite/client", "webxr"],
+    "types": ["vite/client", "webxr", "node"],
     "allowArbitraryExtensions": true,
     "skipLibCheck": true,
 

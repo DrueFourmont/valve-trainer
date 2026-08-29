@@ -16,6 +16,10 @@ const LAYOUT = {
   deck: { size: [2.8, 0.12, 1.1] as const, y: 0.06 },
   pipe: { radius: 0.085, length: 2.6, y: 0.8 },
   pedestalX: 1.15,
+  /** Drain valve hanging under the pipe run, lever turns about its own Y. */
+  bleed: { stub: { radius: 0.035, height: 0.18 }, body: 0.12, lever: { length: 0.2, thickness: 0.03 } },
+  /** Post and plate where the lockout tag gets hung. */
+  tag: { x: -1.3, plateY: 1.05, post: 0.05, plate: [0.17, 0.21, 0.02] as const },
   /** Valve centre positions along the pipe run; inlet upstream at -X. */
   valves: {
     valve_inlet: -0.6,
@@ -34,6 +38,7 @@ const materials = {
   pipe: new THREE.MeshStandardMaterial({ color: 0x8d949c, roughness: 0.45, metalness: 0.35 }),
   valveBody: new THREE.MeshStandardMaterial({ color: 0x4a5a68, roughness: 0.6, metalness: 0.25 }),
   handle: new THREE.MeshStandardMaterial({ color: 0xc0442b, roughness: 0.5, metalness: 0.1 }),
+  tag: new THREE.MeshStandardMaterial({ color: 0xd7a92b, roughness: 0.7, metalness: 0.05 }),
 }
 
 function box(w: number, h: number, d: number, material: THREE.Material, name: string) {
@@ -98,6 +103,70 @@ function createValve(name: HandleName, x: number): THREE.Group {
   return valve
 }
 
+/** Drain valve under the pipe. The lever group turns about its own Y axis. */
+function createBleed(): THREE.Group {
+  const { stub, body, lever } = LAYOUT.bleed
+  const pipeY = LAYOUT.pipe.y
+
+  const group = new THREE.Group()
+  group.name = 'bleed_assembly'
+
+  const stubMesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(stub.radius, stub.radius, stub.height),
+    materials.pipe,
+  )
+  stubMesh.name = 'bleed_stub'
+  stubMesh.position.y = pipeY - LAYOUT.pipe.radius - stub.height / 2
+  group.add(stubMesh)
+
+  const bodyY = pipeY - LAYOUT.pipe.radius - stub.height - body / 2
+
+  const bodyMesh = box(body, body, body, materials.valveBody, 'bleed_body')
+  bodyMesh.position.y = bodyY
+  group.add(bodyMesh)
+
+  const handle = new THREE.Group()
+  handle.name = 'bleed'
+  handle.position.y = bodyY
+
+  const leverMesh = box(lever.length, lever.thickness, lever.thickness, materials.handle, 'bleed_lever')
+  leverMesh.position.x = lever.length / 2
+  handle.add(leverMesh)
+
+  group.add(handle)
+  return group
+}
+
+/** Post and hanging plate. The plate is the interactable, the post is not. */
+function createTagPoint(): THREE.Group {
+  const { x, plateY, post, plate } = LAYOUT.tag
+
+  const group = new THREE.Group()
+  group.name = 'tag_assembly'
+  group.position.x = x
+
+  const deckTop = LAYOUT.deck.y + LAYOUT.deck.size[1] / 2
+  const postHeight = plateY - deckTop
+
+  const postMesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(post / 2, post / 2, postHeight),
+    materials.frame,
+  )
+  postMesh.name = 'tag_post'
+  postMesh.position.y = deckTop + postHeight / 2
+  group.add(postMesh)
+
+  const plateGroup = new THREE.Group()
+  plateGroup.name = 'tag_point'
+  plateGroup.position.y = plateY
+
+  const plateMesh = box(...plate, materials.tag, 'tag_plate')
+  plateGroup.add(plateMesh)
+
+  group.add(plateGroup)
+  return group
+}
+
 export function createSkid(): THREE.Group {
   const skid = new THREE.Group()
   skid.name = 'skid'
@@ -126,6 +195,9 @@ export function createSkid(): THREE.Group {
   for (const name of HANDLE_NAMES) {
     skid.add(createValve(name, LAYOUT.valves[name]))
   }
+
+  skid.add(createBleed())
+  skid.add(createTagPoint())
 
   return skid
 }

@@ -11,6 +11,7 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
+    "@types/node": "^26.4.0",
     "typescript": "~6.0.2",
     "vite": "^8.2.2",
     "vite-plugin-mkcert": "^2.1.0",

@@ -1,0 +1,31 @@
+{
+  "id": "valve-isolation",
+  "title": "Valve Isolation",
+  "targetSeconds": 90,
+  "steps": [
+    {
+      "id": "close-inlet",
+      "target": "valve_inlet",
+      "label": "Close the inlet valve",
+      "hint": "Isolate upstream first so the line stops filling behind you."
+    },
+    {
+      "id": "close-outlet",
+      "target": "valve_outlet",
+      "label": "Close the outlet valve",
+      "hint": "Now close downstream to trap the section between both valves."
+    },
+    {
+      "id": "bleed-line",
+      "target": "bleed",
+      "label": "Bleed the trapped line",
+      "hint": "Open the drain under the pipe to release pressure before anyone works on it."
+    },
+    {
+      "id": "hang-tag",
+      "target": "tag_point",
+      "label": "Hang the lockout tag",
+      "hint": "Tag the isolation so nobody reopens it while the work is going on."
+    }
+  ]
+}

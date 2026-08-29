@@ -1,18 +1,19 @@
 import { describe, expect, it } from 'vitest'
+import { ALLOWED_TARGETS } from '../procedure/machine'
 import { createSkid } from '../scene/skid'
 import { Hover, collectInteractables } from './interactables'
 
 describe('collectInteractables', () => {
-  it('finds every named node on the skid', () => {
-    const { items, missing } = collectInteractables(createSkid(), ['valve_inlet', 'valve_outlet'])
-    expect(items.map((i) => i.name)).toEqual(['valve_inlet', 'valve_outlet'])
+  it('finds every interactable the procedure is allowed to use', () => {
+    const { items, missing } = collectInteractables(createSkid(), ALLOWED_TARGETS)
+    expect(items.map((i) => i.name)).toEqual([...ALLOWED_TARGETS])
     expect(missing).toEqual([])
   })
 
   it('reports names it could not find instead of throwing', () => {
-    const { items, missing } = collectInteractables(createSkid(), ['valve_inlet', 'bleed'])
+    const { items, missing } = collectInteractables(createSkid(), ['valve_inlet', 'valve_bypass'])
     expect(items.map((i) => i.name)).toEqual(['valve_inlet'])
-    expect(missing).toEqual(['bleed'])
+    expect(missing).toEqual(['valve_bypass'])
   })
 
   it('gives each interactable its own materials', () => {
