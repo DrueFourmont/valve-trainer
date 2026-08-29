@@ -12,9 +12,9 @@ point of a training record.
 
 ## Links
 
-- Live trainer: TBD after deploy
-- Tablet: same link, add `?mode=2d`
-- Instructor view: same host, `/instructor`
+- Live trainer: https://valve-trainer.vercel.app
+- Tablet: https://valve-trainer.vercel.app/?mode=2d
+- Instructor view: https://valve-trainer.vercel.app/instructor
 - Demo video: TBD
 
 Useful URL parameters:

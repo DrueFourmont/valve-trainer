@@ -4,7 +4,8 @@ State of the Valve Isolation Trainer as of the end of Phase 6.
 
 ## Current state
 
-Working end to end, locally, against a live Supabase project. Not deployed.
+Deployed and working end to end at https://valve-trainer.vercel.app against a
+live Supabase project.
 
 - Both modes run from one codebase, sharing one `interact()` function and one
   procedure state machine
@@ -35,8 +36,13 @@ insert and select behaviour, absence of delete permission, the deployed edge
 function returning a correct score, and the recorded rows matching what the
 score cards showed.
 
-**Not verified by anyone.** Behaviour on a real Quest headset. Real world
-performance numbers. Anything after a Vercel deploy.
+**Verified against the live deployment.** Both pages serve, the model serves as
+`model/gltf-binary`, a missing model returns a real 404 rather than HTML with a
+200, Brotli takes the bundle from 664 kB to 174 kB, and cache headers apply.
+Lighthouse on production scores 83 performance, 100 accessibility, 100 best
+practices, 100 SEO.
+
+**Not verified by anyone.** Behaviour on a real Quest headset.
 
 ## Known gaps
 
@@ -53,9 +59,11 @@ performance numbers. Anything after a Vercel deploy.
    because the current model is not Draco compressed. They cost deploy size, not
    page weight. Dropping `DRACOLoader` would remove them at the cost of breaking
    a future compressed export.
-6. **Lighthouse performance was measured on software rendering** with mobile
-   throttling and no compression, so the 53 is not meaningful. Accessibility,
-   best practices, and SEO are all 100. A real number needs a deploy.
+6. **Lighthouse performance on production is 83.** What holds it back is 610 ms
+   of total blocking time and 8.6 s of main thread work, which is Three.js
+   parsing plus scene setup. Part of that is the audit running on software
+   rendering; a device with a real GPU will do better. Accessibility, best
+   practices, and SEO are all 100.
 7. **Instructor page shows the most recent 200 attempts** with no pagination,
    filtering, or per student view.
 8. **One procedure exists.** The loader supports more, nothing selects between
@@ -63,12 +71,9 @@ performance numbers. Anything after a Vercel deploy.
 
 ## Next three tasks
 
-1. **Deploy to Vercel and record the demo clips.** `vercel.json` is in place and
-   deliberately has no SPA catch-all rewrite, because that is what makes a
-   missing model return HTML with a 200 instead of a 404. Set
-   `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in the Vercel project. Then
-   fill in the four TBD links at the top of the README and record desktop,
-   tablet, and emulator clips.
+1. **Record the demo clips** on desktop, tablet, and the Immersive Web Emulator,
+   then fill in the demo video link at the top of the README. The deploy itself
+   is done.
 
 2. **Try it on a real Quest.** The live link works in the Quest browser with no
    further work. Expect to adjust teleport distance and the wrist panel angle.
