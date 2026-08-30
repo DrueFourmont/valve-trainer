@@ -30,6 +30,7 @@ const headed = process.env.E2E_HEADED === '1'
 
 export default defineConfig({
   testDir: './e2e',
+  globalTeardown: './e2e/global-teardown.ts',
   outputDir: './test-results',
   fullyParallel: false, // one dev server, one GPU, one scene
   workers: 1,
