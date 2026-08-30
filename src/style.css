@@ -285,3 +285,38 @@ canvas {
     font-size: 14px;
   }
 }
+
+.vr-button {
+  position: fixed;
+  left: 50%;
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 1000;
+  min-width: 150px;
+  min-height: 48px;
+  padding: 12px 26px;
+  border: 1px solid #3a4a58;
+  border-radius: 9px;
+  background: #1e2731;
+  color: #e6edf3;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.vr-button:hover:not(:disabled) {
+  background: #26323e;
+  border-color: #4a5f70;
+}
+
+.vr-button:focus-visible {
+  outline: 2px solid #2ea8ff;
+  outline-offset: 2px;
+}
+
+.vr-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}

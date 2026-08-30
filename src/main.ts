@@ -1,6 +1,5 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { VRButton } from 'three/addons/webxr/VRButton.js'
 import './style.css'
 import { submitAttempt } from './api/attempts'
 import { playBuzzer, playClick, playSuccess } from './audio/sfx'
@@ -20,6 +19,7 @@ import { createLoadingScreen } from './ui/loading-screen'
 import { hasCoarsePointer, onboardingFor, showOnboarding } from './ui/onboarding'
 import { showScorePanel } from './ui/score-panel'
 import { showToast } from './ui/toast'
+import { createVrButton } from './ui/vr-button'
 import { canEnterVr } from './ui/xr-support'
 
 const mode = new URLSearchParams(location.search).get('mode') === 'vr' ? 'vr' : '2d'
@@ -295,7 +295,7 @@ async function boot(): Promise<void> {
   if (mode === 'vr' && (await canEnterVr())) {
     renderer.xr.enabled = true
     renderer.xr.setReferenceSpaceType('local-floor')
-    document.body.appendChild(VRButton.createButton(renderer))
+    document.body.appendChild(createVrButton(renderer))
 
     wristHud = createWristHud()
     xrInput = setupXrInput({
