@@ -47,6 +47,15 @@ iPad over the public URL, and in the Immersive Web Emulator, with the attempt
 reaching the instructor page each time. Both demo videos were recorded against
 the deployed build and are linked from the README.
 
+**Explicitly not verified, and cannot be from here.** The framebuffer scale
+change in `src/ui/vr-button.ts` sets the headset's native resolution rather than
+WebXR's lower default. The Immersive Web Emulator renders into a desktop canvas,
+so `getNativeFramebufferScaleFactor()` returns 1.0 there and the change is a
+no-op by construction. It only does anything on hardware that reports a factor
+above 1, so its benefit is unproven and will stay unproven until someone puts
+this on a Quest. The clamp of 1.5 in `MAX_FRAMEBUFFER_SCALE` is a chosen ceiling,
+not a measured one.
+
 **Not verified by anyone.** Behaviour on a real Quest headset.
 
 ## Deploying, and one trap worth knowing

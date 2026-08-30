@@ -39,34 +39,41 @@ export function createVrButton(renderer: THREE.WebGLRenderer): HTMLButtonElement
   button.className = 'vr-button'
   button.textContent = 'Enter VR'
 
-  let active: XRSession | null = null
-
-  function idle(): void {
-    active = null
+  // The label is driven by the renderer, not by a copy of the session kept
+  // here. A local copy desyncs the moment a session ends by a route this button
+  // did not initiate, such as the headset menu or the emulator's own exit, and
+  // then the button is stuck reading Exit VR with no way back into a session.
+  renderer.xr.addEventListener('sessionstart', () => {
+    button.textContent = 'Exit VR'
+  })
+  renderer.xr.addEventListener('sessionend', () => {
     button.textContent = 'Enter VR'
-  }
+  })
 
   async function enter(): Promise<void> {
     if (!navigator.xr) return
     button.disabled = true
 
+    let opened: XRSession | null = null
     try {
-      const session = await navigator.xr.requestSession('immersive-vr', {
+      opened = await navigator.xr.requestSession('immersive-vr', {
         optionalFeatures: SESSION_FEATURES,
       })
 
       // Before setSession, always. three reads this while building the layer,
       // and the setter warns and does nothing once a session is presenting.
       renderer.xr.setFramebufferScaleFactor(
-        framebufferScale(XRWebGLLayer.getNativeFramebufferScaleFactor(session)),
+        framebufferScale(XRWebGLLayer.getNativeFramebufferScaleFactor(opened)),
       )
 
-      await renderer.xr.setSession(session)
-      session.addEventListener('end', idle, { once: true })
-
-      active = session
-      button.textContent = 'Exit VR'
+      await renderer.xr.setSession(opened)
+      opened = null // three owns it now
     } catch (error: unknown) {
+      // A session that opened but was never handed over leaves the headset in a
+      // session nothing is rendering to, which reads as a hang rather than an
+      // error. Close it rather than stranding the student in a black room.
+      void opened?.end().catch(() => undefined)
+
       const message = error instanceof Error ? error.message : String(error)
       showToast(`Could not start VR. ${message}`, 'error', 8000)
     } finally {
@@ -75,7 +82,8 @@ export function createVrButton(renderer: THREE.WebGLRenderer): HTMLButtonElement
   }
 
   button.addEventListener('click', () => {
-    if (active) void active.end()
+    const current = renderer.xr.getSession()
+    if (current) void current.end()
     else void enter()
   })
 
