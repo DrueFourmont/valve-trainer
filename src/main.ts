@@ -11,6 +11,7 @@ import { ALLOWED_TARGETS, ProcedureMachine, type Procedure, parseProcedure } fro
 import { scoreAttempt } from './procedure/score'
 import { Effects, Steam } from './scene/effects'
 import { createWristHud, type WristHud } from './scene/hud-wrist'
+import { NOTE_PANEL_OFFSET, SCORE_PANEL_OFFSET, STANDING_POSITION } from './scene/layout'
 import { loadSkid } from './scene/load-skid'
 import { createNotePanel, createWorldPanel, disposePanel } from './scene/world-panel'
 import type { StepView } from './ui/hud'
@@ -210,7 +211,7 @@ async function boot(): Promise<void> {
         // each one holds a canvas texture that nothing else will free.
         if (scorePanel) disposePanel(scorePanel)
         scorePanel = createWorldPanel(summary)
-        scorePanel.position.set(0, 1.45, -1.5)
+        scorePanel.position.copy(SCORE_PANEL_OFFSET)
         rig.add(scorePanel)
       } else {
         showScorePanel(summary)
@@ -330,14 +331,14 @@ async function boot(): Promise<void> {
       savedQuaternion.copy(camera.quaternion)
       savedScale.copy(camera.scale)
       controls.enabled = false
-      rig.position.set(0, 0, 2.4) // stand off the skid, floor at y = 0
+      rig.position.copy(STANDING_POSITION)
 
       // DOM does not exist inside a session, so the VR card has to be geometry.
       // Parked in front of the rig, which is where the student is looking when
       // the session opens.
       if (!vrCard) {
         vrCard = createNotePanel()
-        vrCard.position.set(0, 1.5, -1.6)
+        vrCard.position.copy(NOTE_PANEL_OFFSET)
         rig.add(vrCard)
       }
     })

@@ -80,9 +80,13 @@ export function createWristHud(): WristHud {
   const height = (PANEL_WIDTH_M * CANVAS_HEIGHT) / CANVAS_WIDTH
   const mesh = new THREE.Mesh(
     new THREE.PlaneGeometry(PANEL_WIDTH_M, height),
-    new THREE.MeshBasicMaterial({ map: texture, transparent: true }),
+    // Depth tested against nothing, for the same reason as the other panels: a
+    // step tracker you cannot read because your hand is behind a valve body is
+    // worse than one that ignores the world.
+    new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthTest: false }),
   )
   mesh.name = 'wrist_hud'
+  mesh.renderOrder = 20
   mesh.position.copy(MOUNT_POSITION)
   mesh.visible = false
 

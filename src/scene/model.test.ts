@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs'
 import * as THREE from 'three'
 import { describe, expect, it } from 'vitest'
 import { ALLOWED_TARGETS } from '../procedure/machine'
+import { NOTE_PANEL_OFFSET, SCORE_PANEL_OFFSET, STANDING_POSITION } from './layout'
+import { NOTE_PANEL_SIZE, SCORE_PANEL_SIZE } from './world-panel'
 
 /**
  * Checks the shipped skid.glb itself, not code.
@@ -21,7 +23,27 @@ interface GltfNode {
   scale?: number[]
 }
 
-function readGlbJson(path: string): { nodes: GltfNode[] } {
+interface GltfPrimitive {
+  attributes: Record<string, number>
+  indices?: number
+}
+
+interface GltfMesh {
+  primitives?: GltfPrimitive[]
+}
+
+interface GltfAccessor {
+  min?: number[]
+  max?: number[]
+}
+
+interface Gltf {
+  nodes: GltfNode[]
+  meshes: GltfMesh[]
+  accessors: GltfAccessor[]
+}
+
+function readGlbJson(path: string): Gltf {
   const buffer = readFileSync(path)
   expect(buffer.toString('utf8', 0, 4), 'not a binary glTF').toBe('glTF')
   const jsonLength = buffer.readUInt32LE(12)
@@ -95,5 +117,63 @@ describe('skid.glb', () => {
     // Blender silently appends .001, which quietly breaks lookup by name.
     const names = gltf.nodes.map((node) => node.name).filter(Boolean)
     expect(new Set(names).size).toBe(names.length)
+  })
+})
+
+describe('VR panels against the real equipment', () => {
+  /** Everything the model draws, in world space. */
+  function modelBounds(): THREE.Box3 {
+    const box = new THREE.Box3()
+    gltf.nodes.forEach((node, index) => {
+      if (node.mesh === undefined) return
+      const world = worldMatrix(index)
+      for (const prim of gltf.meshes[node.mesh].primitives ?? []) {
+        const accessor = gltf.accessors[prim.attributes.POSITION]
+        if (!accessor?.min || !accessor?.max) continue
+        box.union(
+          new THREE.Box3(
+            new THREE.Vector3().fromArray(accessor.min),
+            new THREE.Vector3().fromArray(accessor.max),
+          ).applyMatrix4(world),
+        )
+      }
+    })
+    return box
+  }
+
+  /** Panels face the student, so they are wide and tall and almost flat in Z. */
+  function panelBounds(
+    offset: THREE.Vector3,
+    size: { width: number; height: number },
+  ): THREE.Box3 {
+    const centre = STANDING_POSITION.clone().add(offset)
+    return new THREE.Box3().setFromCenterAndSize(
+      centre,
+      new THREE.Vector3(size.width, size.height, 0.04),
+    )
+  }
+
+  const cases: [string, THREE.Vector3, { width: number; height: number }][] = [
+    ['score panel', SCORE_PANEL_OFFSET, SCORE_PANEL_SIZE],
+    ['onboarding panel', NOTE_PANEL_OFFSET, NOTE_PANEL_SIZE],
+  ]
+
+  it.each(cases)('the %s does not sit inside the equipment', (_name, offset, size) => {
+    // Panels ignore depth so they always read, which means a panel overlapping
+    // the skid would look like it is embedded in a pump rather than hidden.
+    expect(modelBounds().intersectsBox(panelBounds(offset, size))).toBe(false)
+  })
+
+  it.each(cases)('the %s is in front of the student, not behind them', (_name, offset) => {
+    // Rig forward is -Z at session start.
+    expect(offset.z).toBeLessThan(0)
+  })
+
+  it.each(cases)('the %s sits at a readable distance', (_name, offset) => {
+    // Closer than about a metre and a panel this size fills the view. Past two
+    // and the text drops under the arc size the panel was designed for.
+    const distance = Math.hypot(offset.x, offset.z)
+    expect(distance).toBeGreaterThanOrEqual(1.0)
+    expect(distance).toBeLessThanOrEqual(2.0)
   })
 })

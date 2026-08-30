@@ -16,6 +16,19 @@ const CANVAS_WIDTH = 1024
 const CANVAS_HEIGHT = 640
 const PANEL_WIDTH_M = 0.9
 
+/**
+ * Panels draw over the scene rather than being depth tested against it. They
+ * are UI: a result card the student cannot read because a pump is between them
+ * and it is worse than a card that ignores the world.
+ */
+const PANEL_RENDER_ORDER = 30
+
+/** Exported so a test can prove the panel clears the equipment. */
+export const SCORE_PANEL_SIZE = {
+  width: PANEL_WIDTH_M,
+  height: (PANEL_WIDTH_M * CANVAS_HEIGHT) / CANVAS_WIDTH,
+}
+
 export function createWorldPanel(summary: AttemptSummary): THREE.Mesh {
   const canvas = document.createElement('canvas')
   canvas.width = CANVAS_WIDTH
@@ -48,12 +61,12 @@ export function createWorldPanel(summary: AttemptSummary): THREE.Mesh {
   texture.colorSpace = THREE.SRGBColorSpace
   texture.anisotropy = 4
 
-  const height = (PANEL_WIDTH_M * CANVAS_HEIGHT) / CANVAS_WIDTH
   const mesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(PANEL_WIDTH_M, height),
-    new THREE.MeshBasicMaterial({ map: texture, transparent: true }),
+    new THREE.PlaneGeometry(SCORE_PANEL_SIZE.width, SCORE_PANEL_SIZE.height),
+    new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthTest: false }),
   )
   mesh.name = 'score_panel'
+  mesh.renderOrder = PANEL_RENDER_ORDER
   return mesh
 }
 
@@ -77,6 +90,14 @@ export function disposePanel(mesh: THREE.Mesh): void {
   }
 }
 
+const NOTE_CANVAS = { width: 1024, height: 300 }
+
+/** Exported so a test can prove the panel clears the equipment. */
+export const NOTE_PANEL_SIZE = {
+  width: 0.62,
+  height: (0.62 * NOTE_CANVAS.height) / NOTE_CANVAS.width,
+}
+
 /**
  * The VR onboarding card. Same reason as the score panel: there is no DOM
  * inside a session, so guidance has to be geometry.
@@ -87,9 +108,8 @@ export function disposePanel(mesh: THREE.Mesh): void {
  * large that it covers the equipment it is describing.
  */
 export function createNotePanel(): THREE.Mesh {
-  const width = 1024
-  const height = 300
-  const panelWidthM = 0.62
+  const width = NOTE_CANVAS.width
+  const height = NOTE_CANVAS.height
 
   const canvas = document.createElement('canvas')
   canvas.width = width
@@ -121,9 +141,10 @@ export function createNotePanel(): THREE.Mesh {
   texture.anisotropy = 4
 
   const mesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(panelWidthM, (panelWidthM * height) / width),
-    new THREE.MeshBasicMaterial({ map: texture, transparent: true }),
+    new THREE.PlaneGeometry(NOTE_PANEL_SIZE.width, NOTE_PANEL_SIZE.height),
+    new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthTest: false }),
   )
   mesh.name = 'onboarding_panel'
+  mesh.renderOrder = PANEL_RENDER_ORDER
   return mesh
 }
