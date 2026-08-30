@@ -13,22 +13,39 @@ test('the left thumbstick teleports the player', async ({ page }) => {
 
   // Aim the left hand at a floor point inside the work area, in front of the
   // student, then push the stick forward to raise the arc.
+  // Aim the left hand at a floor point inside the work area, in front of the
+  // student, then push the stick forward to raise the arc.
   const aimed = await page.evaluate(() => window.__trainer!.xrAim('left', [0.6, 0, 0.9]))
   expect(aimed, 'could not aim the left controller').toBe(true)
 
   await page.evaluate(() => window.__trainer!.xrThumbstick('left', 0, -1))
-  await frames(page, 10)
+
+  // Wait for the aim to actually register rather than for a number of frames.
+  // Frame counting made this flaky: window rAF and the XR frame loop are not
+  // the same clock, so ten frames is sometimes not ten XR frames.
+  await page.waitForFunction(() => window.__trainer!.visible('teleport_marker') === true, undefined, {
+    timeout: 10_000,
+  })
   await shot(page, 'vr-teleport-arc')
 
-  // Releasing commits the teleport, which then fades out and back in.
+  // Releasing commits the teleport, which fades out, moves, and fades back in.
   await page.evaluate(() => window.__trainer!.xrThumbstick('left', 0, 0))
-  await frames(page, 45)
+
+  await page.waitForFunction(
+    (start) => {
+      const now = window.__trainer!.rigPosition()
+      return Math.hypot(now[0] - start[0], now[2] - start[2]) > 0.1
+    },
+    before,
+    { timeout: 10_000 },
+  )
 
   const after = await page.evaluate(() => window.__trainer!.rigPosition())
   const moved = Math.hypot(after[0] - before[0], after[2] - before[2])
 
   expect(moved, `rig did not move: ${before.join(',')} -> ${after.join(',')}`).toBeGreaterThan(0.1)
   expect(after[1], 'teleport must never change height').toBeCloseTo(before[1], 5)
+  expect(await page.evaluate(() => window.__trainer!.visible('teleport_marker'))).toBe(false)
 
   // Still inside the work area, which is a 3.5 m disc centred on the skid.
   expect(Math.hypot(after[0], after[2])).toBeLessThanOrEqual(3.5)

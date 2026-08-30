@@ -26,6 +26,28 @@ language and keep summaries short.
 - Keep the whole thing small. No abstraction that exists for a future which is
   not in the current plan.
 
+## Asset budget
+
+The trainer is downloaded over wifi by a headset, so weight is a feature. These
+are limits, not targets, and a change that breaks one needs a reason.
+
+| Asset | Limit | Now |
+| --- | --- | --- |
+| `public/models/skid.glb` | 500 kB | 192 kB |
+| HDRI environment | 2 MB, 1K only, never 2K | 1.7 MB |
+| JavaScript over the wire | 250 kB | 174 kB brotli |
+| Total first load | 3 MB | about 2.1 MB |
+| Deployed `dist` on disk | 5 MB | 4.2 MB |
+
+First load and deploy size are different numbers. `dist` carries about 1.2 MB of
+Draco decoder that Vite emits because DRACOLoader references it, and which is
+never fetched unless a model is Draco compressed. The current one is not.
+
+The HDRI is the largest single asset by a wide margin. 2K of the same file is
+6.4 MB, and every material on the skid is rough with no mirror surfaces, so the
+extra resolution would buy nothing visible in the lighting. HDR and EXR are
+already binary float data and gain almost nothing from compression on the wire.
+
 ## Definition of done
 
 A phase is not done until all of these pass and the output has been shown:

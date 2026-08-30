@@ -5,18 +5,21 @@ import { type Hud, type StepView, trackerText } from '../ui/hud'
  * The VR HUD. DOM does not exist inside an immersive session, so this is a
  * canvas on a plane parented to the left controller grip.
  *
- * Sizing, since VR text is judged in degrees of arc and not pixels. The canvas
- * is 640 px wide drawn onto a 0.17 m plane, so 1 px is about 0.27 mm. The step
- * label at 46 px is therefore about 12.2 mm tall. Read at roughly 0.35 m, the
- * distance to your own raised wrist, that is about 2.0 degrees of arc. Text
- * starts to strain below about 1 degree, and the Quest 3S panel is softer than
- * a monitor, so this still leaves headroom. The 30 px hint works out near 1.3
- * degrees, readable and deliberately quieter than the label.
+ * Sizing, since VR text is judged in degrees of arc and nothing else. At 0.22 m
+ * the panel measured 30.5 degrees of the view, which is a phone held to your
+ * face rather than a watch on your wrist. At 0.12 m it is near 20, which is the
+ * size a glanceable readout wants to be.
+ *
+ * Shrinking the plane shrinks the type with it, so the type grew to compensate.
+ * The canvas is 640 px wide on a 0.12 m plane, so 1 px is 0.1875 mm. The 68 px
+ * label is 12.8 mm, about 1.8 degrees at the third of a metre you hold a hand
+ * at, and the 46 px hint lands near 1.2. Both clear the roughly 1 degree floor
+ * where text starts to strain, with the hint deliberately quieter.
  */
 
 const CANVAS_WIDTH = 640
-const CANVAS_HEIGHT = 360
-const PANEL_WIDTH_M = 0.17
+const CANVAS_HEIGHT = 400
+const PANEL_WIDTH_M = 0.12
 
 /**
  * Where the panel sits relative to the grip. Position comes from the grip so it
@@ -104,23 +107,23 @@ export function createWristHud(): WristHud {
     ctx.textAlign = 'left'
 
     ctx.fillStyle = '#9ad2ff'
-    ctx.font = '600 34px system-ui, sans-serif'
-    ctx.fillText(trackerText(view).toUpperCase(), 34, 66)
+    ctx.font = '600 40px system-ui, sans-serif'
+    ctx.fillText(trackerText(view).toUpperCase(), 30, 62)
 
     ctx.fillStyle = '#e6edf3'
-    ctx.font = '600 46px system-ui, sans-serif'
-    let y = 140
-    for (const line of wrapText(ctx, view.label, CANVAS_WIDTH - 68)) {
-      ctx.fillText(line, 34, y)
-      y += 54
+    ctx.font = '600 68px system-ui, sans-serif'
+    let y = 138
+    for (const line of wrapText(ctx, view.label, CANVAS_WIDTH - 60)) {
+      ctx.fillText(line, 30, y)
+      y += 74
     }
 
     ctx.fillStyle = '#9fb6cc'
-    ctx.font = '400 30px system-ui, sans-serif'
-    y += 12
-    for (const line of wrapText(ctx, view.hint, CANVAS_WIDTH - 68)) {
-      ctx.fillText(line, 34, y)
-      y += 38
+    ctx.font = '400 46px system-ui, sans-serif'
+    y += 14
+    for (const line of wrapText(ctx, view.hint, CANVAS_WIDTH - 60)) {
+      ctx.fillText(line, 30, y)
+      y += 52
     }
 
     texture.needsUpdate = true

@@ -20,9 +20,11 @@ export const ONBOARDING: Record<OnboardingKind, readonly [string, string]> = {
     'Drag to look around. Press a handle, then lift your finger to operate it.',
     'Slide off before lifting to cancel. A wrong move is recorded, not blocked.',
   ],
+  // Deliberately terser than the flat modes. This is set large enough to read
+  // at 1.6 m in a headset, and every extra word costs type size.
   vr: [
-    'Point a controller at a handle and pull the trigger to operate it.',
-    'Left stick teleports, right stick turns. Your current step is on your wrist.',
+    'Point at a handle. Pull the trigger.',
+    'Left stick moves. Right stick turns.',
   ],
 }
 

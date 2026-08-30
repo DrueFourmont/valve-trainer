@@ -95,13 +95,17 @@ export function setupLocomotion(opts: {
   scene.add(marker)
 
   // Shown only while aiming, so a red arc has a visible reason.
+  // Wider and brighter than it started. At 4 cm of dim slate on a dark floor it
+  // was drawn but effectively invisible, which is worse than not drawing it: the
+  // arc turns red with no visible reason.
   const boundary = new THREE.Mesh(
-    new THREE.RingGeometry(WORK_AREA_RADIUS_M - 0.04, WORK_AREA_RADIUS_M, 72),
+    new THREE.RingGeometry(WORK_AREA_RADIUS_M - 0.12, WORK_AREA_RADIUS_M, 96),
     new THREE.MeshBasicMaterial({
-      color: 0x4f6474,
+      color: 0x2ea8ff,
       transparent: true,
-      opacity: 0.5,
+      opacity: 0.85,
       side: THREE.DoubleSide,
+      depthWrite: false,
     }),
   )
   boundary.name = 'work_area'

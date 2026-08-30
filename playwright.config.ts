@@ -14,18 +14,26 @@ try {
 
 /**
  * The trainer is a WebGL app, so these run against a real browser rendering a
- * real scene. Headless Chromium on this Mac has no GPU path worth trusting, so
- * the default is headed, where WebGL works. CI has no display, so it falls back
- * to headless with ANGLE on SwiftShader, which is slow but correct.
+ * real scene.
+ *
+ * Headless by default, with ANGLE on SwiftShader for WebGL. Headed was the
+ * first choice on the assumption that headless had no usable GPU path, but it
+ * turned out to be both intrusive, since it throws browser windows across the
+ * desktop, and unstable: three consecutive headed runs gave 20, 21 and 19
+ * passes with the browser dying mid run, while headless gave 21 twice. It is
+ * slower, about 2.5 minutes against 1, and that is a good trade for a suite
+ * whose entire purpose is to be trusted.
+ *
+ * Set E2E_HEADED=1 to watch it work.
  */
-const inCi = Boolean(process.env.CI)
+const headed = process.env.E2E_HEADED === '1'
 
 export default defineConfig({
   testDir: './e2e',
   outputDir: './test-results',
   fullyParallel: false, // one dev server, one GPU, one scene
   workers: 1,
-  retries: inCi ? 1 : 0,
+  retries: process.env.CI ? 1 : 0,
   timeout: 60_000,
   expect: { timeout: 10_000 },
   reporter: [['list'], ['html', { outputFolder: 'test-results/report', open: 'never' }]],
@@ -44,12 +52,10 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        headless: inCi,
+        headless: !headed,
         viewport: { width: 1280, height: 800 },
         launchOptions: {
-          args: inCi
-            ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox']
-            : [],
+          args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox'],
         },
       },
     },

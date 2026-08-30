@@ -76,6 +76,15 @@ number on the card and the number in the database cannot disagree.
 Score starts at 100, loses 15 for each wrong action, and loses 1 for every full
 10 seconds over the procedure's 90 second target. Floor of 0.
 
+## Credits
+
+The lighting environment is [Industrial Pipe & Valve
+01](https://polyhaven.com/a/industrial_pipe_and_valve_01) from Poly Haven, CC0.
+It is used at 1K for both the image based lighting and the background, which is
+what makes the machined metal look machined rather than shaded. Rendering uses
+ACES filmic tone mapping, because feeding real high dynamic range values into a
+renderer that does not tone map simply clips them.
+
 ## Known simplification
 
 Row level security is deliberately permissive. Anyone holding the anon key can

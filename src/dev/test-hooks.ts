@@ -41,6 +41,12 @@ export interface TrainerHooks {
   loadTime(): number
   rigPosition(): [number, number, number]
   isPresenting(): boolean
+  /** Whether image based lighting actually loaded. */
+  hasEnvironment(): boolean
+  /** Whether a named object in the scene is currently drawn. */
+  visible(name: string): boolean | null
+  /** How much of the view a named object takes, in degrees. */
+  angularSize(name: string): number | null
   /** Per eye render resolution against the canvas it is shown on. */
   xrResolution(): {
     eyeWidth: number
@@ -81,6 +87,7 @@ const HAND_ORIGIN = new THREE.Vector3(0.2, 1.2, 0)
 export function installTestHooks(deps: {
   renderer: THREE.WebGLRenderer
   camera: THREE.Camera
+  scene: THREE.Object3D
   rig: THREE.Object3D
   items: Map<string, Interactable>
   interact: (name: string) => void
@@ -89,7 +96,7 @@ export function installTestHooks(deps: {
 }): void {
   if (!wantsTestHooks()) return
 
-  const { renderer, camera, rig, items, interact, machine, fps } = deps
+  const { renderer, camera, scene, rig, items, interact, machine, fps } = deps
   const readyAt = performance.now()
 
   /** The bounding box centre, not the origin: a lever's origin is at its pivot,
@@ -227,6 +234,45 @@ export function installTestHooks(deps: {
 
     rigPosition(): [number, number, number] {
       return [rig.position.x, rig.position.y, rig.position.z]
+    },
+
+    hasEnvironment(): boolean {
+      return (scene as THREE.Scene).environment !== null
+    },
+
+    visible(name: string): boolean | null {
+      const object = scene.getObjectByName(name)
+      if (!object) return null
+
+      // An object is only really drawn if nothing above it is hidden.
+      let node: THREE.Object3D | null = object
+      while (node) {
+        if (!node.visible) return false
+        node = node.parent
+      }
+      return true
+    },
+
+    /**
+     * Apparent size in degrees, which is the only unit that means anything for
+     * VR readability. Pixels depend on a resolution the headset chooses and
+     * metres depend on a distance the student chooses.
+     */
+    angularSize(name: string): number | null {
+      const object = scene.getObjectByName(name)
+      if (!object) return null
+
+      const box = new THREE.Box3().setFromObject(object)
+      if (box.isEmpty()) return null
+
+      const sphere = box.getBoundingSphere(new THREE.Sphere())
+      const eye = new THREE.Vector3()
+      camera.getWorldPosition(eye)
+
+      const distance = eye.distanceTo(sphere.center)
+      if (distance <= sphere.radius) return 180
+
+      return (2 * Math.atan(sphere.radius / distance) * 180) / Math.PI
     },
 
     isPresenting(): boolean {

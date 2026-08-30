@@ -54,6 +54,12 @@ export async function waitForReady(page: Page): Promise<void> {
   })
   // The loading screen fades over 300 ms and would otherwise sit in screenshots.
   await expect(page.locator('.loading-screen')).toHaveCount(0, { timeout: 5_000 })
+
+  // Let the scene actually render before anything projects a world position to
+  // a screen point. Without this the first click of a run occasionally used a
+  // stale camera matrix and missed, which showed up as a flake rather than a
+  // failure and is worse than either.
+  await frames(page, 5)
 }
 
 export async function state(page: Page): Promise<TrainerState> {

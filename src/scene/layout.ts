@@ -14,4 +14,4 @@ export const STANDING_POSITION = new THREE.Vector3(0, 0, 2.4)
 
 /** Both offsets are rig local, so they follow snap turns. */
 export const SCORE_PANEL_OFFSET = new THREE.Vector3(0, 1.45, -1.5)
-export const NOTE_PANEL_OFFSET = new THREE.Vector3(0, 1.5, -1.6)
+export const NOTE_PANEL_OFFSET = new THREE.Vector3(0, 1.5, -1.4)

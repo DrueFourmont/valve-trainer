@@ -90,11 +90,11 @@ export function disposePanel(mesh: THREE.Mesh): void {
   }
 }
 
-const NOTE_CANVAS = { width: 1024, height: 300 }
+const NOTE_CANVAS = { width: 1280, height: 380 }
 
 /** Exported so a test can prove the panel clears the equipment. */
 export const NOTE_PANEL_SIZE = {
-  width: 0.62,
+  width: 0.8,
   height: (0.62 * NOTE_CANVAS.height) / NOTE_CANVAS.width,
 }
 
@@ -102,10 +102,13 @@ export const NOTE_PANEL_SIZE = {
  * The VR onboarding card. Same reason as the score panel: there is no DOM
  * inside a session, so guidance has to be geometry.
  *
- * Sized wider and shorter than the score panel because it holds two sentences
- * rather than one number. At 0.62 m wide and parked 1.6 m away, the 38 px body
- * text works out around 1.3 degrees of arc, which is readable without being so
- * large that it covers the equipment it is describing.
+ * Sized so the text clears the legibility floor rather than so the panel looks
+ * neat. The first version set 38 px across 0.62 m, which is 23 mm, and at the
+ * 1.6 m it sits at that is 0.82 degrees of arc, under the roughly 1 degree
+ * where text starts to strain. It measured fine as a panel and read as a blur.
+ *
+ * Now 1280 px across 0.8 m, so 1 px is 0.625 mm and the 64 px body is 40 mm,
+ * about 1.6 degrees at 1.4 m. The copy was shortened to afford the size.
  */
 export function createNotePanel(): THREE.Mesh {
   const width = NOTE_CANVAS.width
@@ -125,15 +128,15 @@ export function createNotePanel(): THREE.Mesh {
   ctx.textAlign = 'center'
 
   ctx.fillStyle = '#9ad2ff'
-  ctx.font = '600 34px system-ui, sans-serif'
-  ctx.fillText('GETTING STARTED', width / 2, 74)
+  ctx.font = '600 40px system-ui, sans-serif'
+  ctx.fillText('GETTING STARTED', width / 2, 84)
 
   ctx.fillStyle = '#e6edf3'
-  ctx.font = '400 38px system-ui, sans-serif'
-  let y = 152
+  ctx.font = '400 64px system-ui, sans-serif'
+  let y = 200
   for (const line of ONBOARDING.vr) {
     ctx.fillText(line, width / 2, y)
-    y += 62
+    y += 88
   }
 
   const texture = new THREE.CanvasTexture(canvas)

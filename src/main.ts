@@ -12,6 +12,7 @@ import { scoreAttempt } from './procedure/score'
 import { Effects, Steam } from './scene/effects'
 import { createWristHud, type WristHud } from './scene/hud-wrist'
 import { NOTE_PANEL_OFFSET, SCORE_PANEL_OFFSET, STANDING_POSITION } from './scene/layout'
+import { installEnvironment } from './scene/environment'
 import { loadSkid } from './scene/load-skid'
 import { createNotePanel, createWorldPanel, disposePanel } from './scene/world-panel'
 import type { StepView } from './ui/hud'
@@ -79,13 +80,20 @@ async function boot(): Promise<void> {
     return
   }
 
+  // An environment map feeds real high dynamic range values in, and three's
+  // default of no tone mapping simply clips them, which is what turned the deck
+  // into a flat yellow blowout. ACES compresses the highlights instead.
+  renderer.toneMapping = THREE.ACESFilmicToneMapping
+  renderer.toneMappingExposure = 1.1
+
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.setSize(window.innerWidth, window.innerHeight)
   app.appendChild(renderer.domElement)
 
   const scene = new THREE.Scene()
+  // Replaced by the environment map once it loads. This is only what shows
+  // during the load itself.
   scene.background = new THREE.Color(0x0e1216)
-  scene.fog = new THREE.Fog(0x0e1216, 9, 26)
 
   const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.05, 100)
   camera.position.set(2.4, 1.75, 2.6)
@@ -102,15 +110,24 @@ async function boot(): Promise<void> {
   grid.name = 'floor_grid'
   scene.add(grid)
 
-  scene.add(new THREE.HemisphereLight(0xa8c0d6, 0x24282d, 1.1))
+  // Rebalanced for image based lighting. These were tuned against a black void
+  // and roughly doubled the light once an environment was added, which blew out
+  // the pale deck. The key light stays only to keep a directional highlight and
+  // a sense of where the light is coming from; the environment does the rest.
+  scene.add(new THREE.HemisphereLight(0xa8c0d6, 0x24282d, 0.25))
 
-  const keyLight = new THREE.DirectionalLight(0xffffff, 2)
+  const keyLight = new THREE.DirectionalLight(0xffffff, 0.6)
   keyLight.position.set(3.5, 6, 4)
   scene.add(keyLight)
 
-  const fillLight = new THREE.DirectionalLight(0xbcd2e8, 0.5)
-  fillLight.position.set(-4, 3, -3)
-  scene.add(fillLight)
+  // Loaded before the model so the first frame of the skid is already lit.
+  try {
+    await installEnvironment(scene, renderer, (fraction) => loading.setProgress(fraction))
+  } catch (error: unknown) {
+    // Not fatal. The scene is dimmer without it but entirely usable.
+    const message = error instanceof Error ? error.message : String(error)
+    showToast(`Lighting environment did not load, so the scene is dimmer. ${message}`, 'error', 8000)
+  }
 
   let skid: THREE.Object3D
   try {
@@ -440,6 +457,7 @@ async function boot(): Promise<void> {
     installTestHooks({
       renderer,
       camera,
+      scene,
       rig,
       items: itemsByName,
       interact,
