@@ -7,6 +7,10 @@ import { showToast } from './toast'
  * A refusal here is not fatal. The scene, the procedure, and the scoring all
  * work with mouse and touch, so an unsupported browser falls back to the 2D
  * experience rather than showing a dead end.
+ *
+ * These messages never time out. They are the only thing explaining why the
+ * Enter VR button is not on screen, and a explanation that vanishes after
+ * twelve seconds leaves a missing control and no reason for it.
  */
 export async function canEnterVr(): Promise<boolean> {
   if (!window.isSecureContext) {
@@ -18,7 +22,7 @@ export async function canEnterVr(): Promise<boolean> {
     showToast(
       'This browser does not support WebXR, so the trainer is running in 2D. Drag to look around and tap the handles. For VR, open this page in the Meta Quest browser.',
       'info',
-      12000,
+      0,
     )
     return false
   }
@@ -28,11 +32,11 @@ export async function canEnterVr(): Promise<boolean> {
     showToast(
       'No VR headset is available, so the trainer is running in 2D. Drag to look around and tap the handles.',
       'info',
-      12000,
+      0,
     )
     return false
   } catch {
-    showToast('Could not check for VR support, so the trainer is running in 2D.', 'info', 12000)
+    showToast('Could not check for VR support, so the trainer is running in 2D.', 'info', 0)
     return false
   }
 }
