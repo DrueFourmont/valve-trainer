@@ -43,10 +43,21 @@ Drue has no VR headset. VR is verified only by Drue in the Immersive Web
 Emulator, a Chrome DevTools extension that Claude cannot drive. 2D is verified
 only by Drue on desktop Chrome and on an iPad over the LAN HTTPS URL.
 
-Claude cannot see the render. So every VR or 2D change ends with a precise
-numbered checklist: which URL, which controller, which button in the emulator
-panel, and what should happen. Drue reports back. That report is the
-verification. Never mark something verified that Claude could not run itself.
+Claude cannot see the render. Never mark something verified that Claude could
+not run itself.
+
+Two classes of change, handled differently:
+
+- **Provable without looking.** Typecheck, tests, build, and numeric or
+  geometric assertions. Claude proceeds and commits without stopping. A memory
+  leak, a wrong rotation axis, or a panel sitting inside the equipment are all
+  provable this way, and a test proves them better than a person squinting at a
+  screen does.
+- **Needs eyes.** How something looks or feels. Claude still writes a precise
+  numbered checklist, which URL, which controller, which button in the emulator
+  panel, and what should happen, but batches these into one checklist at the end
+  of a work block rather than one per change. Drue reports back, and that report
+  is the verification.
 
 ## Decisions the student will feel
 

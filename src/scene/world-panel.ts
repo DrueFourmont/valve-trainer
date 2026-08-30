@@ -58,6 +58,26 @@ export function createWorldPanel(summary: AttemptSummary): THREE.Mesh {
 }
 
 /**
+ * Frees what a panel holds on the GPU.
+ *
+ * removeFromParent detaches the mesh and frees nothing. These panels are rebuilt
+ * on every completed run and every session entry, each carrying a canvas texture
+ * of a megabyte or more, so without this a student who runs the procedure a few
+ * times accumulates every previous panel on a headset with far less memory
+ * headroom than a desktop.
+ */
+export function disposePanel(mesh: THREE.Mesh): void {
+  mesh.removeFromParent()
+  mesh.geometry.dispose()
+
+  for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+    const textured = material as THREE.MeshBasicMaterial
+    textured.map?.dispose()
+    material.dispose()
+  }
+}
+
+/**
  * The VR onboarding card. Same reason as the score panel: there is no DOM
  * inside a session, so guidance has to be geometry.
  *

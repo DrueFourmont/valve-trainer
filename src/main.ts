@@ -13,7 +13,7 @@ import { scoreAttempt } from './procedure/score'
 import { Effects, Steam } from './scene/effects'
 import { createWristHud, type WristHud } from './scene/hud-wrist'
 import { loadSkid } from './scene/load-skid'
-import { createNotePanel, createWorldPanel } from './scene/world-panel'
+import { createNotePanel, createWorldPanel, disposePanel } from './scene/world-panel'
 import type { StepView } from './ui/hud'
 import { createHud2d } from './ui/hud-2d'
 import { createLoadingScreen } from './ui/loading-screen'
@@ -206,11 +206,12 @@ async function boot(): Promise<void> {
     window.setTimeout(() => {
       playSuccess()
       if (renderer.xr.isPresenting) {
-        // Leaving and re-entering a session would otherwise stack panels.
-        rig.getObjectByName('score_panel')?.removeFromParent()
-        const panel = createWorldPanel(summary)
-        panel.position.set(0, 1.45, -1.5)
-        rig.add(panel)
+        // Leaving and re-entering a session would otherwise stack panels, and
+        // each one holds a canvas texture that nothing else will free.
+        if (scorePanel) disposePanel(scorePanel)
+        scorePanel = createWorldPanel(summary)
+        scorePanel.position.set(0, 1.45, -1.5)
+        rig.add(scorePanel)
       } else {
         showScorePanel(summary)
       }
@@ -252,12 +253,13 @@ async function boot(): Promise<void> {
   // never blocks input, so a tap that dismisses it also lands on the scene.
   const kind = onboardingFor(mode, hasCoarsePointer())
   const card = kind === 'vr' ? null : showOnboarding(kind)
-  let vrCard: THREE.Object3D | null = null
+  let vrCard: THREE.Mesh | null = null
+  let scorePanel: THREE.Mesh | null = null
 
   function dismissOnboarding(): void {
     card?.dismiss()
     if (vrCard) {
-      vrCard.removeFromParent()
+      disposePanel(vrCard)
       vrCard = null
     }
   }
