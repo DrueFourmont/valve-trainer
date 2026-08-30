@@ -41,6 +41,14 @@ export interface TrainerHooks {
   loadTime(): number
   rigPosition(): [number, number, number]
   isPresenting(): boolean
+  /** Per eye render resolution against the canvas it is shown on. */
+  xrResolution(): {
+    eyeWidth: number
+    eyeHeight: number
+    canvasWidth: number
+    canvasHeight: number
+    devicePixelRatio: number
+  } | null
   /** Point an emulated controller's ray at a world point. */
   xrAim(hand: 'left' | 'right', target: [number, number, number]): boolean
   /** Sugar: aim the right controller at a named node. */
@@ -223,6 +231,26 @@ export function installTestHooks(deps: {
 
     isPresenting(): boolean {
       return renderer.xr.isPresenting
+    },
+
+    /**
+     * What the headset is actually being rendered at. Blurriness in VR is
+     * almost always this number being lower than the display it lands on, and
+     * it is a measurement rather than an opinion.
+     */
+    xrResolution() {
+      if (!renderer.xr.isPresenting) return null
+      const viewport = renderer.xr.getCamera().cameras[0]?.viewport
+      if (!viewport) return null
+
+      const rect = renderer.domElement.getBoundingClientRect()
+      return {
+        eyeWidth: viewport.z,
+        eyeHeight: viewport.w,
+        canvasWidth: rect.width,
+        canvasHeight: rect.height,
+        devicePixelRatio: window.devicePixelRatio,
+      }
     },
 
     xrAim(hand: 'left' | 'right', target: [number, number, number]): boolean {
