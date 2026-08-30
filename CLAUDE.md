@@ -33,6 +33,17 @@ A phase is not done until all of these pass and the output has been shown:
 - `npx tsc --noEmit`
 - `npm run lint` if a lint script exists
 - `npm test`
+- `npm run test:e2e`
+
+And not until Claude has opened every screenshot in `test-results/shots/` with
+the Read tool and described each in one line. A screenshot that looks wrong is a
+failing check even when every assertion passed, because an assertion cannot tell
+the difference between a working scene and a black rectangle. Two real bugs have
+already been caught this way and neither had a failing assertion.
+
+Manual checks are only for things a script genuinely cannot judge: VR comfort,
+nausea, text legibility at real focal distance, and how the controllers feel in
+the hand. Those are listed separately and kept short.
 
 Commit at the end of every phase with a short plain message. Never `git push`
 without asking.

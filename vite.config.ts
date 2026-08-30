@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import mkcert from 'vite-plugin-mkcert'
 
 // HTTPS and LAN binding are both required: WebXR only starts in a secure
@@ -25,6 +25,10 @@ export default defineConfig({
         instructor: 'instructor.html',
       },
     },
+  },
+  test: {
+    // Playwright specs use their own runner and throw if vitest loads them.
+    exclude: ['node_modules/**', 'e2e/**', 'dist/**'],
   },
   server: {
     host: true,

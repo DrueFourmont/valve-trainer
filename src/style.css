@@ -127,6 +127,12 @@ canvas {
   pointer-events: none;
 }
 
+/* An author `display` beats the user agent's `[hidden] { display: none }`, so
+   setting the attribute alone left the bar on screen after the run finished. */
+.hud-bar[hidden] {
+  display: none;
+}
+
 .hud-tracker {
   flex: none;
   display: flex;

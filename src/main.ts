@@ -26,6 +26,14 @@ import { canEnterVr } from './ui/xr-support'
 const mode = new URLSearchParams(location.search).get('mode') === 'vr' ? 'vr' : '2d'
 
 /**
+ * Compile time constant. Both branches below are dead in a production build, so
+ * Rollup drops the dynamic imports and the whole of src/dev with them. A guard
+ * inside those modules would not be enough: the bundler cannot prove a runtime
+ * check is always false, and an earlier version of this shipped the test hooks.
+ */
+const DEV_TOOLS = import.meta.env.DEV || import.meta.env.MODE === 'test'
+
+/**
  * Handles turn a quarter turn about their own local Y, which is the axis the
  * model puts the stem on. The tag hangs rather than turning, because a plate
  * rotated 90 degrees would go edge on and look like it vanished.
@@ -47,6 +55,14 @@ async function loadProcedure(): Promise<Procedure> {
 }
 
 async function boot(): Promise<void> {
+  // First, before anything reads navigator.xr. Installing the emulated headset
+  // replaces navigator.xr wholesale, so the support check and the renderer both
+  // have to run after it.
+  if (DEV_TOOLS) {
+    const { installEmulatedHeadset } = await import('./dev/xr-device')
+    await installEmulatedHeadset()
+  }
+
   const app = document.querySelector<HTMLDivElement>('#app')!
   const loading = createLoadingScreen()
 
@@ -373,10 +389,14 @@ async function boot(): Promise<void> {
   const timer = new THREE.Timer()
   const headPosition = new THREE.Vector3()
   let lastLoopError = ''
+  let framesPerSecond = 0
 
   renderer.setAnimationLoop((timestamp: number) => {
     timer.update(timestamp)
     const delta = Math.min(timer.getDelta(), MAX_FRAME_DELTA)
+
+    // Smoothed, because a single frame time is noise rather than a measurement.
+    if (delta > 0) framesPerSecond += (1 / delta - framesPerSecond) * 0.1
 
     // A throw in here used to take the whole render with it, so the headset
     // went black with no way to see why. Keep drawing and surface the reason.
@@ -414,6 +434,19 @@ async function boot(): Promise<void> {
   }
 
   loading.dismiss()
+
+  if (DEV_TOOLS) {
+    const { installTestHooks } = await import('./dev/test-hooks')
+    installTestHooks({
+      renderer,
+      camera,
+      rig,
+      items: itemsByName,
+      interact,
+      machine: () => machine,
+      fps: () => framesPerSecond,
+    })
+  }
 }
 
 void boot()
