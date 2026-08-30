@@ -15,8 +15,7 @@ point of a training record.
 - Live trainer: https://valve-trainer.vercel.app
 - Tablet: https://valve-trainer.vercel.app/?mode=2d
 - Instructor view: https://valve-trainer.vercel.app/instructor
-- Demo, VR walkthrough: https://www.loom.com/share/5c11b20d830b4692af5260c137cedc7a
-- Demo, instructor view: https://www.loom.com/share/e135315f6dc14b1ca8ecdca0e2f37cc8
+- Walkthrough: https://www.loom.com/share/75766aa896454f8d85cc56a5f04b219f
 
 Useful URL parameters:
 
