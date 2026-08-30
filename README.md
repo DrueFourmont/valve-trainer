@@ -85,6 +85,45 @@ what makes the machined metal look machined rather than shaded. Rendering uses
 ACES filmic tone mapping, because feeding real high dynamic range values into a
 renderer that does not tone map simply clips them.
 
+## Where this goes
+
+This is one module, but the shape of it is meant to be a pipeline. Worth being
+precise about how far that is true today.
+
+**Already data.** The procedure itself is a JSON file, not code. Steps, their
+order, the target node for each, the hint text and the time budget all live in
+`public/procedures/valve-isolation.json`. A second procedure over the same
+equipment is a second file and no code at all.
+
+**Still code.** Five things are welded to this particular module:
+
+| Hardcoded | Where |
+| --- | --- |
+| The four allowed node names | `src/procedure/machine.ts` |
+| Which nodes turn, and which drop | `src/main.ts` |
+| The model path | `src/scene/load-skid.ts` |
+| The environment path | `src/scene/environment.ts` |
+| The procedure path | `src/main.ts` |
+
+So a genuinely new module, different equipment and different steps, is a small
+code change today rather than a config change. The work to close that is
+contained: move those five into the procedure file and give it a manifest that
+names its own model, environment and interactable set.
+
+**What it would become.** A module is then two artefacts and a contract:
+
+1. A procedure file describing the steps
+2. A GLB whose node names match the targets that file references
+
+And the contract between them is already enforced. `src/scene/model.test.ts`
+reads the actual GLB and fails the build if a named node is missing, is scaled,
+is duplicated, or if a handle does not turn about a vertical axis. Those are the
+faults that look fine in Blender, export silently, and only reveal themselves as
+a handwheel tumbling sideways in a headset. Catching them in CI rather than in a
+review session is the part that makes producing many modules bearable.
+
+That contract is the reusable thing here, more than any individual module.
+
 ## Known simplification
 
 Row level security is deliberately permissive. Anyone holding the anon key can
