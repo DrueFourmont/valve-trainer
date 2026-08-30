@@ -13,10 +13,11 @@ import { scoreAttempt } from './procedure/score'
 import { Effects, Steam } from './scene/effects'
 import { createWristHud, type WristHud } from './scene/hud-wrist'
 import { loadSkid } from './scene/load-skid'
-import { createWorldPanel } from './scene/world-panel'
+import { createNotePanel, createWorldPanel } from './scene/world-panel'
 import type { StepView } from './ui/hud'
 import { createHud2d } from './ui/hud-2d'
 import { createLoadingScreen } from './ui/loading-screen'
+import { hasCoarsePointer, onboardingFor, showOnboarding } from './ui/onboarding'
 import { showScorePanel } from './ui/score-panel'
 import { showToast } from './ui/toast'
 import { canEnterVr } from './ui/xr-support'
@@ -220,6 +221,8 @@ async function boot(): Promise<void> {
   function interact(name: string): void {
     if (!machine) return
 
+    dismissOnboarding()
+
     const result = machine.interact(name)
 
     const item = itemsByName.get(name)
@@ -244,6 +247,22 @@ async function boot(): Promise<void> {
 
     refreshHud()
   }
+
+  // Guidance shows once and leaves the moment the student does anything. It
+  // never blocks input, so a tap that dismisses it also lands on the scene.
+  const kind = onboardingFor(mode, hasCoarsePointer())
+  const card = kind === 'vr' ? null : showOnboarding(kind)
+  let vrCard: THREE.Object3D | null = null
+
+  function dismissOnboarding(): void {
+    card?.dismiss()
+    if (vrCard) {
+      vrCard.removeFromParent()
+      vrCard = null
+    }
+  }
+
+  renderer.domElement.addEventListener('pointerdown', dismissOnboarding, { once: true })
 
   const controls = new OrbitControls(camera, renderer.domElement)
   controls.target.set(0, 0.85, 0)
@@ -284,6 +303,7 @@ async function boot(): Promise<void> {
       items,
       onInteract: interact,
       wristMount: wristHud.mesh,
+      onSelect: dismissOnboarding,
     })
     locomotion = setupLocomotion({
       renderer,
@@ -309,6 +329,15 @@ async function boot(): Promise<void> {
       savedScale.copy(camera.scale)
       controls.enabled = false
       rig.position.set(0, 0, 2.4) // stand off the skid, floor at y = 0
+
+      // DOM does not exist inside a session, so the VR card has to be geometry.
+      // Parked in front of the rig, which is where the student is looking when
+      // the session opens.
+      if (!vrCard) {
+        vrCard = createNotePanel()
+        vrCard.position.set(0, 1.5, -1.6)
+        rig.add(vrCard)
+      }
     })
 
     renderer.xr.addEventListener('sessionend', () => {
@@ -321,6 +350,7 @@ async function boot(): Promise<void> {
       camera.updateProjectionMatrix()
       renderer.setSize(window.innerWidth, window.innerHeight)
       hover.clear()
+      dismissOnboarding()
       controls.enabled = true
       controls.update()
     })

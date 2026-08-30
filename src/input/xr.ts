@@ -35,8 +35,10 @@ export function setupXrInput(opts: {
   onInteract: (name: string) => void
   /** Parented to whichever grip reports itself as the left hand. */
   wristMount?: THREE.Object3D
+  /** Fires on any trigger press, whether or not it hit anything. */
+  onSelect?: () => void
 }): { update: () => void } {
-  const { renderer, rig, hover, items, onInteract, wristMount } = opts
+  const { renderer, rig, hover, items, onInteract, wristMount, onSelect } = opts
 
   const raycaster = new THREE.Raycaster()
   const rotation = new THREE.Matrix4()
@@ -55,6 +57,7 @@ export function setupXrInput(opts: {
     const hand = { controller, ray, source: `xr-${index}`, hit: null as Interactable | null }
 
     controller.addEventListener('selectstart', () => {
+      onSelect?.()
       if (hand.hit) onInteract(hand.hit.name)
     })
 

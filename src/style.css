@@ -243,3 +243,45 @@ canvas {
   text-align: center;
   line-height: 1.45;
 }
+
+.onboarding {
+  position: fixed;
+  top: calc(18px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 950;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: min(560px, calc(100vw - 28px));
+  padding: 15px 18px;
+  border-radius: 10px;
+  border: 1px solid #2f3a45;
+  background: rgb(21 27 34 / 94%);
+  box-shadow: 0 10px 34px rgb(0 0 0 / 40%);
+  /* Never intercept the tap that dismisses it. */
+  pointer-events: none;
+  transition: opacity 240ms ease, transform 240ms ease;
+}
+
+.onboarding-line {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+  color: #e6edf3;
+}
+
+.onboarding-line + .onboarding-line {
+  color: #9fb6cc;
+}
+
+.onboarding-gone {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-8px);
+}
+
+@media (max-width: 480px) {
+  .onboarding-line {
+    font-size: 14px;
+  }
+}

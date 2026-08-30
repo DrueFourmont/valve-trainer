@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { ONBOARDING } from '../ui/onboarding'
 import { type AttemptSummary, summaryLines } from '../ui/score-panel'
 
 /**
@@ -53,5 +54,56 @@ export function createWorldPanel(summary: AttemptSummary): THREE.Mesh {
     new THREE.MeshBasicMaterial({ map: texture, transparent: true }),
   )
   mesh.name = 'score_panel'
+  return mesh
+}
+
+/**
+ * The VR onboarding card. Same reason as the score panel: there is no DOM
+ * inside a session, so guidance has to be geometry.
+ *
+ * Sized wider and shorter than the score panel because it holds two sentences
+ * rather than one number. At 0.62 m wide and parked 1.6 m away, the 38 px body
+ * text works out around 1.3 degrees of arc, which is readable without being so
+ * large that it covers the equipment it is describing.
+ */
+export function createNotePanel(): THREE.Mesh {
+  const width = 1024
+  const height = 300
+  const panelWidthM = 0.62
+
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+
+  const ctx = canvas.getContext('2d')!
+  ctx.fillStyle = 'rgba(14, 18, 22, 0.92)'
+  ctx.fillRect(0, 0, width, height)
+  ctx.strokeStyle = '#2f3a45'
+  ctx.lineWidth = 5
+  ctx.strokeRect(2.5, 2.5, width - 5, height - 5)
+
+  ctx.textAlign = 'center'
+
+  ctx.fillStyle = '#9ad2ff'
+  ctx.font = '600 34px system-ui, sans-serif'
+  ctx.fillText('GETTING STARTED', width / 2, 74)
+
+  ctx.fillStyle = '#e6edf3'
+  ctx.font = '400 38px system-ui, sans-serif'
+  let y = 152
+  for (const line of ONBOARDING.vr) {
+    ctx.fillText(line, width / 2, y)
+    y += 62
+  }
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.anisotropy = 4
+
+  const mesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(panelWidthM, (panelWidthM * height) / width),
+    new THREE.MeshBasicMaterial({ map: texture, transparent: true }),
+  )
+  mesh.name = 'onboarding_panel'
   return mesh
 }
